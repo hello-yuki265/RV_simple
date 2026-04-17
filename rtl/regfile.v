@@ -44,9 +44,10 @@ module regfile(
     // ----------------------
     // 写寄存器堆
     // ----------------------
-    always @(*) begin
+    always @(posedge clk or negedge rst_n) begin
         if (rd_write) begin
-            register[rd] = rd_data;
+            // x0始终为0
+            register[rd] = rd == 5'b0 ? 32'b0 : rd_data;
         end
     end
 

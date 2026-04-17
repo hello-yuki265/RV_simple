@@ -12,7 +12,8 @@ module top_core(
     // ------------------
     // PC指针
     // ------------------
-    wire [7:0] pc;
+    reg [7:0] pc;
+    wire [7:0] pc_plus4;
 
     // --------------------------
     // 指令定义
@@ -25,13 +26,13 @@ module top_core(
     wire [4:0] rd       = instr[11:7];
     wire [6:0] op_code  = instr[6:0];
 
-    wire [24:0] imm;
+    wire [31:0] imm;
     
 
     // -----------------------
     // regfile接口
     // -----------------------
-    wire [31:0] rd_data;
+    reg [31:0] rd_data;
     wire rd_write;
     wire [31:0] rs1_data;
     wire [31:0] rs2_data;
@@ -40,11 +41,11 @@ module top_core(
     // ctrl_unit接口
     // -----------------------
     wire pc_src;
-    wire res_src;
+    wire [1:0] res_src;
     wire mem_write;
     wire [2:0] alu_ctrl;
     wire alu_src;
-    wire imm_src;
+    wire [1:0]imm_src;
     wire reg_write;
 
     // ------------------------
@@ -75,6 +76,7 @@ module top_core(
     .op_code(op_code),
     .funct3(funct3),
     .funct7(funct7),
+    .zero(res == 0),
     .pc_src(pc_src),
     .res_src(res_src),
     .mem_write(mem_write),
@@ -95,16 +97,21 @@ module top_core(
     // -----------------------------
     // IF取指
     // -----------------------------
-    reg [7:0] pc_norm;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            pc_norm <= 0;
+            pc <= 0;
         end else begin
-            // 这里加一，实际的是加了4个字节
-            pc_norm <= pc_norm + 1;
+            if (pc_src == 0) begin
+                pc <= pc_plus4;
+            end else begin
+                // 这里是分支指令，如beq s0, s1, targ
+                pc <= pc + imm;
+            end
+            
         end
     end
-    assign pc = !pc_src ? pc_norm : 0; //TODO: 这里跳转指令暂时没有写，先不考虑
+    assign pc_plus4 = pc + 4;
+    // assign pc = !pc_src ? pc_norm : 0; //TODO: 这里跳转指令暂时没有写，先不考虑
 
     inst_mem  inst_mem_inst (
     .pc(pc),
@@ -114,7 +121,15 @@ module top_core(
     // -----------------------------
     // 译码、写回
     // -----------------------------
-    assign rd_data = !res_src ? mem_r_data : res; //TODO，只考虑访存结果，还没有加其他指令
+    always @(*) begin
+        case (res_src)
+            2'b00: rd_data = mem_r_data;
+            2'b01: rd_data = res;
+            2'b10: rd_data = pc_plus4;
+            default: rd_data = mem_r_data;
+        endcase
+    end
+    
     regfile  regfile_inst (
     .clk(clk),
     .rst_n(rst_n),

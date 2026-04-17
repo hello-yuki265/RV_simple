@@ -20,5 +20,5 @@ module inst_mem(
         mem[10] = 32'h00320733; // ADD x14, x4, x3
     end
 
-    assign instr = mem[pc];
+    assign instr = mem[pc>>2];
 endmodule

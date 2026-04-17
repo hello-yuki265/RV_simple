@@ -22,6 +22,7 @@ module alu(
     always @(*) begin
         case(alu_ctrl)
             3'b000: res = src0 + src1;
+            3'b001: res = src0 - src1;
         endcase
     end
 

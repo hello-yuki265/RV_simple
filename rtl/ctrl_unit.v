@@ -6,16 +6,17 @@ module ctrl_unit (
     input [6:0] op_code,
     input [2:0] funct3,
     input [6:0] funct7,
+    input       zero,
 
     // -----------------
     // 控制信号输出
     // -----------------
     output reg pc_src,
-    output reg res_src,
+    output reg [1:0]res_src,
     output reg mem_write,
     output reg [2:0]alu_ctrl,
     output reg alu_src,
-    output reg imm_src,
+    output reg [1:0]imm_src,
     output reg reg_write
 );
     // =======================
@@ -36,14 +37,16 @@ module ctrl_unit (
     end
     
     reg [1:0] alu_op;
+    reg jump;
     always @(*) begin
-        pc_src = 0;
-        res_src = 0;
+        res_src = 2'b00;
         mem_write = 0;
         alu_op = 0;
         alu_src = 0;
         imm_src = 0;
         reg_write = 0;
+
+        jump = 0;
 
         case (op_code)
             op_list[0]: begin
@@ -51,7 +54,7 @@ module ctrl_unit (
                 alu_op = 2'b00;
                 reg_write = 1;
                 imm_src = 0;
-                res_src = 0;
+                res_src = 2'b00;
                 alu_src = 1;
             end
             op_list[1]: begin
@@ -59,7 +62,7 @@ module ctrl_unit (
                 alu_op = 2'b00;
                 reg_write = 1;
                 imm_src = 0;
-                res_src = 1;
+                res_src = 2'b01;
                 alu_src = 1;
             end
             op_list[2]: begin
@@ -67,6 +70,8 @@ module ctrl_unit (
                 alu_op = 2'b00;
                 reg_write = 0;
                 imm_src = 1; //使用31:25，11:7共12位作为立即数
+                alu_src = 1; //使用立即数进行计算
+                mem_write = 1;
 
             end
             op_list[3]: begin
@@ -74,14 +79,22 @@ module ctrl_unit (
                 alu_op = 2'b10;
                 reg_write = 1;
                 imm_src = 0;
+                mem_write = 0;
+                res_src = 2'b01;
             end
             op_list[4]: begin
                 // Branch指令 (B-type)
                 alu_op = 2'b01;
+                imm_src = 2'b10;
             end
             
             op_list[5]: begin
                 // JAL指令 (J-type)
+                alu_op = 2'b01;
+                imm_src = 2'b11;
+                reg_write = 1;
+                res_src = 2'b10;
+                jump = 1;
             end
             op_list[6]: begin
                 // JALR指令 (I-type)
@@ -125,6 +138,40 @@ module ctrl_unit (
 
 
         endcase
+    end
+
+    reg branch_jump;
+    always @(*) begin
+        branch_jump = 0;
+        if (op_code == op_list[4]) begin
+            case(funct3)
+                3'b000: begin
+                    // beq
+                    branch_jump = zero;
+                end
+                3'b001: begin
+                    // bne
+                    branch_jump = !zero;
+                end
+                3'b100: begin
+                    // blt
+                end
+                3'b101: begin
+                    // bge
+                end
+                3'b110: begin
+                    // bltu
+                end
+                3'b111: begin
+                    // bgeu
+                end
+
+            endcase
+        end
+    end
+
+    always @(*) begin
+        pc_src = branch_jump | jump;
     end
 
 
