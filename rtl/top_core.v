@@ -1,10 +1,21 @@
+/*
+ * @file            rtl/top_core.v
+ * @description     
+ * @author          hello-yuki265 <2658476808@qq.com>
+ * @createTime      2026-04-17 17:55:38
+ * @lastModified    2026-04-18 16:47:38
+ * Copyright ©YourCompanyName All rights reserved
+*/
 
 module top_core(
     clk,
     rst_n
 );
+    
     input clk;
     input rst_n;
+
+    `include "glb_define.v"
 
     // ================================
     // 变量定义
@@ -43,7 +54,7 @@ module top_core(
     wire pc_src;
     wire [1:0] res_src;
     wire mem_write;
-    wire [2:0] alu_ctrl;
+    wire [3:0] alu_ctrl;
     wire alu_src;
     wire [1:0]imm_src;
     wire reg_write;
@@ -76,7 +87,7 @@ module top_core(
     .op_code(op_code),
     .funct3(funct3),
     .funct7(funct7),
-    .zero(res == 0),
+    .alu_res(res),
     .pc_src(pc_src),
     .res_src(res_src),
     .mem_write(mem_write),
@@ -89,9 +100,9 @@ module top_core(
     // ------------------------
     // Extend
     // ------------------------
-    assign imm = imm_src == 2'b00 ? {{20{instr[31]}}, instr[31:20]} : 
-                 imm_src == 2'b01 ? {{20{instr[31]}}, instr[31:25], instr[11:7]} : 
-                 imm_src == 2'b10 ? {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0} : 
+    assign imm = imm_src == `IMM_MUX_I ? {{20{instr[31]}}, instr[31:20]} : 
+                 imm_src == `IMM_MUX_S ? {{20{instr[31]}}, instr[31:25], instr[11:7]} : 
+                 imm_src == `IMM_MUX_B ? {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0} : 
                  {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
     
     // -----------------------------
@@ -123,9 +134,10 @@ module top_core(
     // -----------------------------
     always @(*) begin
         case (res_src)
-            2'b00: rd_data = mem_r_data;
-            2'b01: rd_data = res;
-            2'b10: rd_data = pc_plus4;
+            `RES_MUX_MEM: rd_data = mem_r_data;
+            `RES_MUX_ALU: rd_data = res;
+            `RES_MUX_PCPLUS4: rd_data = pc_plus4;
+            `RES_MUX_IMM: rd_data = imm;
             default: rd_data = mem_r_data;
         endcase
     end
