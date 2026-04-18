@@ -1,3 +1,13 @@
+/*************************************************************************
+ * @Copyright (c) 2026 by hello-yuki265, All Rights Reserved. 
+ * @Author       : hello-yuki265
+ * @Github       : 2658476808@qq.com
+ * @Date         : 2026-04-17 13:02:36
+ * @LastEditors  : hello-yuki265 2658476808@qq.com
+ * @LastEditTime : 2026-04-19 02:38:08
+ * @FilePath     : \RV_simple\rtl\ctrl_unit.v
+ * @Description  : 
+ *************************************************************************/
 
 module ctrl_unit (
     input clk,
@@ -11,12 +21,13 @@ module ctrl_unit (
     // -----------------
     // 控制信号输出
     // -----------------
-    output reg pc_src,
+    output reg [1:0]pc_src,
     output reg [1:0]res_src,
     output reg mem_write,
     output reg [3:0]alu_ctrl,
-    output reg alu_src,
-    output reg [1:0]imm_src,
+    output reg alu0_src,
+    output reg alu1_src,
+    output reg [2:0]imm_src,
     output reg reg_write
 );
     `include "glb_define.v"
@@ -81,6 +92,12 @@ module ctrl_unit (
     //JALR指令 (I-type)
     localparam [6:0] OPC_JALR   = 7'b1100111;   
 
+    // LUI指令(U-type)
+    localparam [6:0] OPC_LUI   = 7'b0110111;   
+
+    // AUIPC指令(U-type)
+    localparam [6:0] OPC_AUIPC   = 7'b0010111;   
+
     // =======================
     // 指令解析
     // 对于RV32I，只使用funct7[5]，结合funct3与op，决定控制信号输出
@@ -93,6 +110,9 @@ module ctrl_unit (
     reg is_rtype;
     reg is_btype;
     reg is_jtype;
+    reg is_jalr;
+    reg is_lui;
+    reg is_auipc;
     reg [2:0]branch_type;
 
 
@@ -103,6 +123,9 @@ module ctrl_unit (
         is_rtype = 0;
         is_btype = 0;
         is_jtype = 0;
+        is_jalr = 0;
+        is_lui = 0;
+        is_auipc = 0;
         branch_type = 0;
 
         case (op_code)
@@ -131,6 +154,16 @@ module ctrl_unit (
                 // JAL指令 (J-type)
                 is_jtype = 1;
             end
+            OPC_JALR: begin
+                // JALR指令 (I-type)
+                is_jalr = 1;
+            end
+            OPC_LUI: begin
+                is_lui = 1;
+            end
+            OPC_AUIPC: begin
+                is_auipc = 1;
+            end
             // op_list[6]: begin
             //     // JALR指令 (I-type)
             // end
@@ -148,11 +181,13 @@ module ctrl_unit (
 
     reg branch_jump;
     always @(*) begin: main_sig_proc
-        res_src = 2'b00;
+        res_src = `WB_MUX_MEM;
         mem_write = 0;
         alu_op = 0;
-        alu_src = 0;
-        imm_src = 2'b00;
+        pc_src = `PC_MUX_NORM;
+        alu0_src = `ALU_MUX_SRC0_RS1;
+        alu1_src = `ALU_MUX_SRC1_RS2;
+        imm_src = `IMM_MUX_I;
         reg_write = 0;
         branch_jump = 0;
         jump = 0;
@@ -163,29 +198,30 @@ module ctrl_unit (
             alu_op = 2'b00;
             reg_write = 1;
             imm_src = `IMM_MUX_I;
-            res_src = `RES_MUX_MEM;
-            alu_src = `ALU_MUX_IMM;
+            res_src = `WB_MUX_MEM;
+            alu1_src = `ALU_MUX_SRC1_IMM;
         end else if (is_imm) begin
             alu_op = 2'b00;
             reg_write = 1;
             imm_src = `IMM_MUX_I;
-            res_src = `RES_MUX_ALU;
-            alu_src = `ALU_MUX_IMM;
+            res_src = `WB_MUX_ALU;
+            alu1_src = `ALU_MUX_SRC1_IMM;
         end else if (is_store) begin
             alu_op = 2'b00;
             reg_write = 0;
             imm_src = `IMM_MUX_S; //使用31:25，11:7共12位作为立即数
-            alu_src = `ALU_MUX_IMM; //使用立即数进行计算
+            alu1_src = `ALU_MUX_SRC1_IMM; //使用立即数进行计算
             mem_write = 1;
         end else if (is_rtype) begin 
             alu_op = 2'b10;
             reg_write = 1;
             // imm_src = `IMM_MUX_6;
             mem_write = 0;
-            res_src = `RES_MUX_ALU;
+            res_src = `WB_MUX_ALU;
         end else if (is_btype) begin
             alu_op = 2'b01;
             imm_src = `IMM_MUX_B;
+            
             case (branch_type)
                 3'b000: begin
                     // beq
@@ -215,12 +251,35 @@ module ctrl_unit (
                     branch_jump = 0;
                 end
             endcase
+
+            pc_src = branch_jump ? `PC_MUX_PLUSIMM : `PC_MUX_NORM;
         end else if (is_jtype) begin
-            alu_op = 2'b01;
+            alu_op = 2'b00;
             imm_src = `IMM_MUX_J;
             reg_write = 1;
-            res_src = 2'b10;
-            jump = 1;
+            res_src = `WB_MUX_PCPLUS4;
+            pc_src = `PC_MUX_PLUSIMM;
+        end else if (is_jalr) begin
+            alu_op = 2'b00;
+            imm_src = `IMM_MUX_I;
+            reg_write = 1;
+            res_src = `WB_MUX_PCPLUS4;
+            alu1_src = `ALU_MUX_SRC1_IMM;
+            pc_src = `PC_MUX_ALU;
+        end else if (is_lui) begin 
+            alu_op = 2'b00;
+            imm_src = `IMM_MUX_U;
+            reg_write = 1;
+            res_src = `WB_MUX_IMM;
+        end else if (is_auipc) begin 
+            alu_op = 2'b00;
+            imm_src = `IMM_MUX_U;
+            reg_write = 1;
+            res_src = `WB_MUX_ALU;
+            alu0_src = `ALU_MUX_SRC0_PC;
+            alu1_src = `ALU_MUX_SRC1_IMM;
+        end else begin
+            // 默认情况
         end
     end
 
@@ -264,7 +323,7 @@ module ctrl_unit (
                         end
                     endcase
                 end else begin
-                    // load, store
+                    // load, store, jump
                     alu_ctrl = `ALU_ADD;
                 end
             end
@@ -310,10 +369,6 @@ module ctrl_unit (
                 alu_ctrl = `ALU_ADD;
             end
         endcase
-    end
-
-    always @(*) begin
-        pc_src = branch_jump | jump;
     end
 
 

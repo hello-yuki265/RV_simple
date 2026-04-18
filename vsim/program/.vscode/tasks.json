@@ -1,0 +1,85 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build RV32I",
+      "type": "shell",
+      "command": "riscv64-unknown-elf-gcc",
+      "args": [
+        "-march=rv32i",
+        "-mabi=ilp32",
+        "-nostdlib",
+        "-T",
+        "link.ld",
+        "-o",
+        "prog.elf",
+        "main.S"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Objdump",
+      "type": "shell",
+      "command": "riscv64-unknown-elf-objdump",
+      "args": [
+        "-d",
+        "prog.elf",
+        ">",
+        "prog.dump"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Binary",
+      "type": "shell",
+      "command": "riscv64-unknown-elf-objcopy",
+      "args": [
+        "-O",
+        "binary",
+        "prog.elf",
+        "prog.bin"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Mem",
+      "type": "shell",
+      "command": "python3",
+      "args": [
+        "bin2mem.py"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build All",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Build RV32I",
+        "Objdump",
+        "Binary",
+        "Mem"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,11 +1,13 @@
-/*
- * @file            rtl/top_core.v
- * @description     
- * @author          hello-yuki265 <2658476808@qq.com>
- * @createTime      2026-04-17 17:55:38
- * @lastModified    2026-04-18 16:47:38
- * Copyright ©YourCompanyName All rights reserved
-*/
+/*************************************************************************
+ * @Copyright (c) 2026 by hello-yuki265, All Rights Reserved. 
+ * @Author       : hello-yuki265
+ * @Github       : 2658476808@qq.com
+ * @Date         : 2026-04-17 15:05:46
+ * @LastEditors  : hello-yuki265 2658476808@qq.com
+ * @LastEditTime : 2026-04-19 02:37:58
+ * @FilePath     : \RV_simple\rtl\top_core.v
+ * @Description  : 
+ *************************************************************************/
 
 module top_core(
     clk,
@@ -51,12 +53,13 @@ module top_core(
     // -----------------------
     // ctrl_unit接口
     // -----------------------
-    wire pc_src;
+    wire [1:0]pc_src;
     wire [1:0] res_src;
     wire mem_write;
     wire [3:0] alu_ctrl;
-    wire alu_src;
-    wire [1:0]imm_src;
+    wire alu0_src;
+    wire alu1_src;
+    wire [2:0]imm_src;
     wire reg_write;
 
     // ------------------------
@@ -92,7 +95,8 @@ module top_core(
     .res_src(res_src),
     .mem_write(mem_write),
     .alu_ctrl(alu_ctrl),
-    .alu_src(alu_src),
+    .alu0_src(alu0_src),
+    .alu1_src(alu1_src),
     .imm_src(imm_src),
     .reg_write(reg_write)
     );
@@ -103,7 +107,8 @@ module top_core(
     assign imm = imm_src == `IMM_MUX_I ? {{20{instr[31]}}, instr[31:20]} : 
                  imm_src == `IMM_MUX_S ? {{20{instr[31]}}, instr[31:25], instr[11:7]} : 
                  imm_src == `IMM_MUX_B ? {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0} : 
-                 {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
+                 imm_src == `IMM_MUX_J ? {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0} : 
+                 {instr[31:12], 12'b0};
     
     // -----------------------------
     // IF取指
@@ -112,17 +117,16 @@ module top_core(
         if (!rst_n) begin
             pc <= 0;
         end else begin
-            if (pc_src == 0) begin
-                pc <= pc_plus4;
-            end else begin
-                // 这里是分支指令，如beq s0, s1, targ
-                pc <= pc + imm;
-            end
+            case (pc_src)
+                `PC_MUX_NORM: pc <= pc_plus4;
+                `PC_MUX_PLUSIMM: pc <= pc + imm;
+                `PC_MUX_ALU: pc <= res & ~1; // jalr指令需要将最低位置0
+                default: pc <= pc_plus4;
+             endcase
             
         end
     end
     assign pc_plus4 = pc + 4;
-    // assign pc = !pc_src ? pc_norm : 0; //TODO: 这里跳转指令暂时没有写，先不考虑
 
     inst_mem  inst_mem_inst (
     .pc(pc),
@@ -134,10 +138,10 @@ module top_core(
     // -----------------------------
     always @(*) begin
         case (res_src)
-            `RES_MUX_MEM: rd_data = mem_r_data;
-            `RES_MUX_ALU: rd_data = res;
-            `RES_MUX_PCPLUS4: rd_data = pc_plus4;
-            `RES_MUX_IMM: rd_data = imm;
+            `WB_MUX_MEM: rd_data = mem_r_data;
+            `WB_MUX_ALU: rd_data = res;
+            `WB_MUX_PCPLUS4: rd_data = pc_plus4;
+            `WB_MUX_IMM: rd_data = imm;
             default: rd_data = mem_r_data;
         endcase
     end
@@ -157,8 +161,8 @@ module top_core(
     // -----------------------------
     // EX执行
     // -----------------------------
-    assign src0 = rs1_data;
-    assign src1 = !alu_src ? rs2_data : imm;
+    assign src0 = alu0_src == `ALU_MUX_SRC0_RS1 ? rs1_data : pc;
+    assign src1 = alu1_src == `ALU_MUX_SRC1_RS2 ? rs2_data : imm;
     alu  alu_inst (
     .clk(clk),
     .rst_n(rst_n),
@@ -176,7 +180,7 @@ module top_core(
     data_mem  data_mem_inst (
     .clk(clk),
     .rst_n(rst_n),
-    .addr(addr),
+    .addr(res),
     .w_en(w_en),
     .w_data(mem_w_data),
     .rd_data(mem_r_data)

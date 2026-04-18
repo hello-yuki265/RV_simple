@@ -1,3 +1,14 @@
+/*************************************************************************
+ * @Copyright (c) 2026 by hello-yuki265, All Rights Reserved. 
+ * @Author       : hello-yuki265
+ * @Github       : 2658476808@qq.com
+ * @Date         : 2026-04-18 16:36:22
+ * @LastEditors  : hello-yuki265 2658476808@qq.com
+ * @LastEditTime : 2026-04-19 02:37:09
+ * @FilePath     : \RV_simple\rtl\glb_define.v
+ * @Description  : 
+ *************************************************************************/
+
 `ifndef _GLB_DEFINE_
 `define _GLB_DEFINE_
 
@@ -24,30 +35,34 @@
 // -------------------
 // IMM_MUX
 // -------------------
-`define IMM_MUX_I  (2'b00)
-`define IMM_MUX_S  (2'b01)
-`define IMM_MUX_B  (2'b10)
-`define IMM_MUX_J  (2'b11)
+`define IMM_MUX_I  (3'b000)
+`define IMM_MUX_S  (3'b001)
+`define IMM_MUX_B  (3'b010)
+`define IMM_MUX_J  (3'b011)
+`define IMM_MUX_U  (3'b100)
 
 // -------------------
 // ALU_MUX
 // -------------------
-`define ALU_MUX_RS2 (1'b0)
-`define ALU_MUX_IMM (1'b1)
+`define ALU_MUX_SRC0_RS1 (1'b0)
+`define ALU_MUX_SRC0_PC  (1'b1)
+`define ALU_MUX_SRC1_RS2 (1'b0)
+`define ALU_MUX_SRC1_IMM (1'b1)
 
 // --------------------
-// RES_MUX
+// WB_MUX
 // --------------------
-`define RES_MUX_MEM (2'b00)
-`define RES_MUX_ALU (2'b01)
-`define RES_MUX_PCPLUS4 (2'b10)
-`define RES_MUX_IMM (2'b11)
+`define WB_MUX_MEM (2'b00)
+`define WB_MUX_ALU (2'b01)
+`define WB_MUX_PCPLUS4 (2'b10)
+`define WB_MUX_IMM (2'b11)
 
 // -------------------
 // PC_MUX
 // -------------------
-`define PC_MUX_NORM (1'b0)
-`define PC_MUX_RES  (1'b1)
+`define PC_MUX_NORM (2'b00)
+`define PC_MUX_PLUSIMM  (2'b01)
+`define PC_MUX_ALU  (2'b10)
 
 
 

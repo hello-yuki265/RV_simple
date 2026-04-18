@@ -1,3 +1,13 @@
+/*************************************************************************
+ * @Copyright (c) 2026 by hello-yuki265, All Rights Reserved. 
+ * @Author       : hello-yuki265
+ * @Github       : 2658476808@qq.com
+ * @Date         : 2026-04-17 12:35:51
+ * @LastEditors  : hello-yuki265 2658476808@qq.com
+ * @LastEditTime : 2026-04-19 02:36:55
+ * @FilePath     : \RV_simple\rtl\data_mem.v
+ * @Description  : 
+ *************************************************************************/
 
 module data_mem(
     input clk,
