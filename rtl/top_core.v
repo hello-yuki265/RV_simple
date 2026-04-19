@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 11:06:25
+ * @LastEditTime : 2026-04-19 14:48:27
  * @FilePath     : \RV_simple\rtl\top_core.v
  * @Description  : 
  *************************************************************************/
@@ -70,7 +70,7 @@ module top_core(
 
     wire [1:0] res_src;
     wire mem_write;
-    wire [3:0] alu_ctrl;
+    wire [9:0] alu_ctrl;
     wire alu0_src;
     wire alu1_src;
     wire [2:0]imm_src;
@@ -105,7 +105,6 @@ module top_core(
     .op_code(op_code),
     .funct3(funct3),
     .funct7(funct7),
-    .alu_res(res),
 
     .is_load(is_load),
     .is_imm(is_imm),
@@ -137,6 +136,7 @@ module top_core(
                  imm_src == `IMM_MUX_S ? {{20{instr[31]}}, instr[31:25], instr[11:7]} : 
                  imm_src == `IMM_MUX_B ? {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0} : 
                  imm_src == `IMM_MUX_J ? {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0} : 
+                 imm_src == `IMM_MUX_U ? {instr[31:12], 12'b0} :
                  {instr[31:12], 12'b0};
     
     // -----------------------------

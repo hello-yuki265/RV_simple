@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 12:27:28
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 10:00:54
+ * @LastEditTime : 2026-04-19 14:48:39
  * @FilePath     : \RV_simple\rtl\alu.v
  * @Description  : 
  *************************************************************************/
@@ -16,7 +16,7 @@ module alu(
     // ----------------
     // 输入
     // ----------------
-    input [3:0]  alu_ctrl,   //计算模式选择,
+    input [9:0]  alu_ctrl,   //计算模式选择,
                            //00: add
 
     input [31:0] src0,  //源0

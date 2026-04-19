@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-18 16:36:22
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 02:37:09
+ * @LastEditTime : 2026-04-19 14:49:44
  * @FilePath     : \RV_simple\rtl\glb_define.v
  * @Description  : 
  *************************************************************************/
@@ -18,17 +18,29 @@
 // ================================
 // ALU operation def
 // ================================
-`define ALU_ADD     (4'b0000)
-`define ALU_SUB     (4'b0001)
-`define ALU_SLL     (4'b0010)
-`define ALU_SLT     (4'b0011)
-`define ALU_SLTU    (4'b0100)   
-`define ALU_XOR     (4'b0101)
-`define ALU_SRL     (4'b0110)
-`define ALU_SRA     (4'b0111)
-`define ALU_OR      (4'b1000)
-`define ALU_AND     (4'b1001)
+`define ALU_OP_NUM    10
+`define ALU_MASK_WIDTH   4
+`define ALU_MASK_ADD     (`ALU_MASK_WIDTH'd0)
+`define ALU_MASK_SUB     (`ALU_MASK_WIDTH'd1)
+`define ALU_MASK_SLL     (`ALU_MASK_WIDTH'd2)
+`define ALU_MASK_SLT     (`ALU_MASK_WIDTH'd3)
+`define ALU_MASK_SLTU    (`ALU_MASK_WIDTH'd4)   
+`define ALU_MASK_XOR     (`ALU_MASK_WIDTH'd5)
+`define ALU_MASK_SRL     (`ALU_MASK_WIDTH'd6)
+`define ALU_MASK_SRA     (`ALU_MASK_WIDTH'd7)
+`define ALU_MASK_OR      (`ALU_MASK_WIDTH'd8)
+`define ALU_MASK_AND     (`ALU_MASK_WIDTH'd9)
 
+`define ALU_ADD     (`ALU_OP_NUM'b00_0000_0001)
+`define ALU_SUB     (`ALU_OP_NUM'b00_0000_0010)
+`define ALU_SLL     (`ALU_OP_NUM'b00_0000_0100)
+`define ALU_SLT     (`ALU_OP_NUM'b00_0000_1000)
+`define ALU_SLTU    (`ALU_OP_NUM'b00_0001_0000)   
+`define ALU_XOR     (`ALU_OP_NUM'b00_0010_0000)
+`define ALU_SRL     (`ALU_OP_NUM'b00_0100_0000)
+`define ALU_SRA     (`ALU_OP_NUM'b00_1000_0000)
+`define ALU_OR      (`ALU_OP_NUM'b01_0000_0000)
+`define ALU_AND     (`ALU_OP_NUM'b10_0000_0000)
 // ================================
 // MUX item def
 // ================================

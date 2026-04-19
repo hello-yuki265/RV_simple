@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 13:02:36
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 11:04:10
+ * @LastEditTime : 2026-04-19 15:00:08
  * @FilePath     : \RV_simple\rtl\ctrl_unit.v
  * @Description  : 
  *************************************************************************/
@@ -16,31 +16,30 @@ module ctrl_unit (
     input [6:0] op_code,
     input [2:0] funct3,
     input [6:0] funct7,
-    input [31:0] alu_res,
 
     // -----------------
     // 控制信号输出
     // -----------------
-    output reg is_load,
-    output reg is_imm,
-    output reg is_store,
-    output reg is_rtype,
-    output reg is_btype,
-    output reg is_jtype,
-    output reg is_jalr,
-    output reg is_lui,
-    output reg is_auipc,
-    output reg [2:0] load_type,
-    output reg [2:0] store_type,
-    output reg [2:0] branch_type,
+    output is_load,
+    output is_imm,
+    output is_store,
+    output is_rtype,
+    output is_btype,
+    output is_jtype,
+    output is_jalr,
+    output is_lui,
+    output is_auipc,
+    output [2:0] load_type,
+    output [2:0] store_type,
+    output [2:0] branch_type,
 
-    output reg [1:0]res_src,
-    output reg mem_write,
-    output reg [3:0]alu_ctrl,
-    output reg alu0_src,
-    output reg alu1_src,
-    output reg [2:0]imm_src,
-    output reg reg_write
+    output [1:0]res_src,
+    output mem_write,
+    output [9:0]alu_ctrl,
+    output alu0_src,
+    output alu1_src,
+    output [2:0]imm_src,
+    output reg_write
 );
     `include "glb_define.v"
 
@@ -96,214 +95,161 @@ module ctrl_unit (
     // =======================
     reg [1:0] alu_op;
 
-    always @(*) begin: decode_opc_proc
-        is_load = 0;
-        is_imm = 0;
-        is_store = 0;
-        is_rtype = 0;
-        is_btype = 0;
-        is_jtype = 0;
-        is_jalr = 0;
-        is_lui = 0;
-        is_auipc = 0;
-        load_type = 0;
-        store_type = 0;
-        branch_type = 0;
+    assign is_load      = op_code == OPC_LOAD;
+    assign is_imm       = op_code == OPC_OP_IMM;
+    assign is_store     = op_code == OPC_STORE;
+    assign is_rtype     = op_code == OPC_REG;
+    assign is_btype     = op_code == OPC_BRANCH;
+    assign is_jtype     = op_code == OPC_JAL;
+    assign is_jalr      = op_code == OPC_JALR;
+    assign is_lui       = op_code == OPC_LUI;
+    assign is_auipc     = op_code == OPC_AUIPC;
 
-        case (op_code)
-            OPC_LOAD: begin
-                // I-type指令 (Load)
-                is_load = 1;
-                load_type = funct3;
-            end
-            OPC_OP_IMM: begin
-                // I-type算术逻辑指令
-                is_imm = 1;
-            end
-            OPC_STORE: begin
-                // Store指令 (S-type)
-                is_store = 1; 
-                store_type = funct3;
-            end
-            OPC_REG: begin
-                // R-type指令
-                is_rtype = 1;
-            end
-            OPC_BRANCH: begin
-                // Branch指令 (B-type)
-                is_btype = 1;
-                branch_type = funct3;
-            end
-            OPC_JAL: begin
-                // JAL指令 (J-type)
-                is_jtype = 1;
-            end
-            OPC_JALR: begin
-                // JALR指令 (I-type)
-                is_jalr = 1;
-            end
-            OPC_LUI: begin
-                is_lui = 1;
-            end
-            OPC_AUIPC: begin
-                is_auipc = 1;
-            end
-            default: begin
-                // 默认情况
-            end
-        endcase
-    end
+    wire funct3_000 = (funct3 == 3'b000);
+    wire funct3_001 = (funct3 == 3'b001);
+    wire funct3_010 = (funct3 == 3'b010);
+    wire funct3_011 = (funct3 == 3'b011);
+    wire funct3_100 = (funct3 == 3'b100);
+    wire funct3_101 = (funct3 == 3'b101);
+    wire funct3_110 = (funct3 == 3'b110);
+    wire funct3_111 = (funct3 == 3'b111);
 
-    always @(*) begin: main_sig_proc
-        res_src = `WB_MUX_MEM;
-        mem_write = 0;
-        alu_op = 0;
-        alu0_src = `ALU_MUX_SRC0_RS1;
-        alu1_src = `ALU_MUX_SRC1_RS2;
-        imm_src = `IMM_MUX_I;
-        reg_write = 0;
+    wire funct7_0000000 = (funct7 == 7'b0000000);
+    wire funct7_0100000 = (funct7 == 7'b0100000);
+    wire funct7_0000001 = (funct7 == 7'b0000001);
+    wire funct7_0000101 = (funct7 == 7'b0000101);
+    wire funct7_0001001 = (funct7 == 7'b0001001);
+    wire funct7_0001101 = (funct7 == 7'b0001101);
+    wire funct7_0010101 = (funct7 == 7'b0010101);
+    wire funct7_0100001 = (funct7 == 7'b0100001);
+    wire funct7_0010001 = (funct7 == 7'b0010001);
+    wire funct7_0101101 = (funct7 == 7'b0101101);
+    wire funct7_1111111 = (funct7 == 7'b1111111);
+    wire funct7_0000100 = (funct7 == 7'b0000100); 
+    wire funct7_0001000 = (funct7 == 7'b0001000); 
+    wire funct7_0001100 = (funct7 == 7'b0001100); 
+    wire funct7_0101100 = (funct7 == 7'b0101100); 
+    wire funct7_0010000 = (funct7 == 7'b0010000); 
+    wire funct7_0010100 = (funct7 == 7'b0010100); 
+    wire funct7_1100000 = (funct7 == 7'b1100000); 
+    wire funct7_1110000 = (funct7 == 7'b1110000); 
+    wire funct7_1010000 = (funct7 == 7'b1010000); 
+    wire funct7_1101000 = (funct7 == 7'b1101000); 
+    wire funct7_1111000 = (funct7 == 7'b1111000); 
+    wire funct7_1010001 = (funct7 == 7'b1010001);  
+    wire funct7_1110001 = (funct7 == 7'b1110001);  
+    wire funct7_1100001 = (funct7 == 7'b1100001);  
+    wire funct7_1101001 = (funct7 == 7'b1101001);  
 
-        if (is_load) begin
-            // LOAD_TYPE
-            // lw s0, -8(s1)
-            alu_op = 2'b00;
-            reg_write = 1;
-            imm_src = `IMM_MUX_I;
-            res_src = `WB_MUX_MEM;
-            alu1_src = `ALU_MUX_SRC1_IMM;
-        end else if (is_imm) begin
-            alu_op = 2'b00;
-            reg_write = 1;
-            imm_src = `IMM_MUX_I;
-            res_src = `WB_MUX_ALU;
-            alu1_src = `ALU_MUX_SRC1_IMM;
-        end else if (is_store) begin
-            alu_op = 2'b00;
-            imm_src = `IMM_MUX_S; 
-            alu1_src = `ALU_MUX_SRC1_IMM; 
-            mem_write = 1;
-        end else if (is_rtype) begin 
-            alu_op = 2'b10;
-            reg_write = 1;
-            res_src = `WB_MUX_ALU;
-        end else if (is_btype) begin
-            alu_op = 2'b01;
-            imm_src = `IMM_MUX_B;
-        end else if (is_jtype) begin
-            alu_op = 2'b00;
-            imm_src = `IMM_MUX_J;
-            reg_write = 1;
-            res_src = `WB_MUX_PCPLUS4;
-        end else if (is_jalr) begin
-            alu_op = 2'b00;
-            imm_src = `IMM_MUX_I;
-            reg_write = 1;
-            res_src = `WB_MUX_PCPLUS4;
-            alu1_src = `ALU_MUX_SRC1_IMM;
-        end else if (is_lui) begin 
-            alu_op = 2'b00;
-            imm_src = `IMM_MUX_U;
-            reg_write = 1;
-            res_src = `WB_MUX_IMM;
-        end else if (is_auipc) begin 
-            alu_op = 2'b00;
-            imm_src = `IMM_MUX_U;
-            reg_write = 1;
-            res_src = `WB_MUX_ALU;
-            alu0_src = `ALU_MUX_SRC0_PC;
-            alu1_src = `ALU_MUX_SRC1_IMM;
-        end else begin
-            // 默认情况
-        end
-    end
+    // ------------------------------------
+    // load
+    // ------------------------------------
+    wire rv32_lb = is_load & funct3_000;
+    wire rv32_lh = is_load & funct3_001;
+    wire rv32_lw = is_load & funct3_010;
+    wire rv32_lbu = is_load & funct3_100;
+    wire rv32_lhu = is_load & funct3_101;
 
-    always @(*) begin: alu_ctrl_proc
-        case (alu_op)
-            2'b00: begin
-                if (is_imm) begin
-                    // immediate
-                    case (funct3)
-                        3'b000: begin
-                            // addi
-                            alu_ctrl = `ALU_ADD;
-                        end
-                        3'b001: begin
-                            // slli
-                            alu_ctrl = `ALU_SLL;
-                        end
-                        3'b010: begin
-                            // slti
-                            alu_ctrl = `ALU_SLT;//有符号小于置位
-                        end
-                        3'b011: begin
-                            // sltiu
-                            alu_ctrl = `ALU_SLTU;//无符号小于置位
-                        end
-                        3'b100: begin
-                            // xori
-                            alu_ctrl = `ALU_XOR;
-                        end
-                        3'b101: begin
-                            // srli、srai
-                            alu_ctrl = funct7[5] ? `ALU_SRA : `ALU_SRL;
-                        end
-                        3'b110: begin
-                            // ori
-                            alu_ctrl = `ALU_OR;//或
-                        end
-                        3'b111: begin
-                            // andi
-                            alu_ctrl = `ALU_AND;//与
-                        end
-                    endcase
-                end else begin
-                    // load, store, jump
-                    alu_ctrl = `ALU_ADD;
-                end
-            end
-            2'b01: begin
-                alu_ctrl = `ALU_SUB;
-            end
-            2'b10: begin
-                case (funct3)
-                    3'b000: begin
-                        alu_ctrl = funct7[5] ? `ALU_SUB : `ALU_ADD;
-                    end
-                    3'b001: begin
-                        // sll
-                        alu_ctrl = `ALU_SLL;
-                    end
-                    3'b010: begin
-                        // slt
-                        alu_ctrl = `ALU_SLT;//有符号小于置位
-                    end
-                    3'b011: begin
-                        // sltu
-                        alu_ctrl = `ALU_SLTU;//无符号小于置位
-                    end
-                    3'b100: begin
-                        // xor
-                        alu_ctrl = `ALU_XOR;
-                    end
-                    3'b101: begin
-                        // srl、sra
-                        alu_ctrl = funct7[5] ? `ALU_SRA : `ALU_SRL;
-                    end
-                    3'b110: begin
-                        // or
-                        alu_ctrl = `ALU_OR;//或
-                    end
-                    3'b111: begin
-                        // and
-                        alu_ctrl = `ALU_AND;//与
-                    end
-                endcase
-            end
-            default: begin
-                alu_ctrl = `ALU_ADD;
-            end
-        endcase
-    end
+    // --------------------------------------
+    // op_imm
+    // --------------------------------------
+    wire rv32_addi = is_imm & funct3_000;
+    wire rv32_slli = is_imm & funct3_001 & funct7_0000000;
+    wire rv32_slti = is_imm & funct3_010;
+    wire rv32_sltiu = is_imm & funct3_011;
+    wire rv32_xori = is_imm & funct3_100;
+    wire rv32_srli = is_imm & funct3_101 & funct7_0000000;
+    wire rv32_srai = is_imm & funct3_101 & funct7_0100000;
+    wire rv32_ori = is_imm & funct3_110;
+    wire rv32_andi = is_imm & funct3_111;
+
+    // --------------------------------------
+    // auipc
+    // --------------------------------------
+    wire rv32_auipc = is_auipc;
+
+    // --------------------------------------
+    // store
+    // --------------------------------------
+    wire rv32_sb = is_store & funct3_000;
+    wire rv32_sh = is_store & funct3_001;
+    wire rv32_sw = is_store & funct3_010;
+
+    // --------------------------------------
+    // r-type
+    // --------------------------------------
+    wire rv32_add   = is_rtype & funct7_0000000 & funct3_000;
+    wire rv32_sub   = is_rtype & funct7_0100000 & funct3_000;
+    wire rv32_sll   = is_rtype & funct7_0000000 & funct3_001;
+    wire rv32_slt   = is_rtype & funct7_0000000 & funct3_010;
+    wire rv32_sltu  = is_rtype & funct7_0000000 & funct3_011;
+    wire rv32_xor   = is_rtype & funct7_0000000 & funct3_100;
+    wire rv32_srl   = is_rtype & funct7_0000000 & funct3_101;
+    wire rv32_sra   = is_rtype & funct7_0100000 & funct3_101;
+    wire rv32_or    = is_rtype & funct7_0000000 & funct3_110;
+    wire rv32_and   = is_rtype & funct7_0000000 & funct3_111;
+    
+    // --------------------------------------
+    // branch
+    // --------------------------------------
+    wire rv32_beq = is_btype & funct3_000;
+    wire rv32_bne = is_btype & funct3_001;
+    wire rv32_blt = is_btype & funct3_100;
+    wire rv32_bge = is_btype & funct3_101;
+    wire rv32_bltu = is_btype & funct3_110;
+    wire rv32_bgeu = is_btype & funct3_111;
+
+    // lui
+    wire rv32_lui = is_lui;
+
+    // jalr
+    wire rv32_jalr = is_jalr;
+
+    // jal
+    wire rv32_jal = is_jtype;
+
+
+    // ---------------------------------------
+    // ALU Contral logic
+    // ---------------------------------------
+    wire [9:0]alu_mask;
+    assign alu_mask[`ALU_MASK_ADD] = rv32_add | rv32_addi 
+                                | is_load | is_store | is_auipc 
+                                | rv32_jal | rv32_jalr;
+    assign alu_mask[`ALU_MASK_SUB] = rv32_sub;
+    assign alu_mask[`ALU_MASK_SLL] = rv32_sll |rv32_slli;
+    assign alu_mask[`ALU_MASK_SLT] = rv32_slt | rv32_slti;
+    assign alu_mask[`ALU_MASK_SLTU] = rv32_sltu | rv32_sltiu;
+    assign alu_mask[`ALU_MASK_XOR] = rv32_xor | rv32_xori;
+    assign alu_mask[`ALU_MASK_SRL] = rv32_srl | rv32_srli;
+    assign alu_mask[`ALU_MASK_SRA] = rv32_sra | rv32_srai;
+    assign alu_mask[`ALU_MASK_OR ] = rv32_or | rv32_ori;
+    assign alu_mask[`ALU_MASK_AND] = rv32_and | rv32_andi;
+
+    // ----------------------------------------
+    // main ctrl logic
+    // ----------------------------------------
+    assign mem_write = is_store;
+    assign reg_write =  is_load | is_imm | is_rtype | is_jtype | is_jalr | is_lui | is_auipc;
+
+    assign alu0_src = rv32_auipc ? `ALU_MUX_SRC0_PC : `ALU_MUX_SRC0_RS1;
+    assign alu1_src = (is_imm | is_load | is_store | rv32_auipc) ? `ALU_MUX_SRC1_IMM : `ALU_MUX_SRC1_RS2;
+    assign imm_src = is_load | is_imm | rv32_jalr ? `IMM_MUX_I :
+                     is_store ? `IMM_MUX_S :
+                     is_btype ? `IMM_MUX_B :
+                     is_jtype ? `IMM_MUX_J :
+                     is_lui | is_auipc ? `IMM_MUX_U :
+                     `IMM_MUX_I; //默认I-type立即数
+    assign res_src = is_load ? `WB_MUX_MEM :
+                     rv32_lui ? `WB_MUX_IMM :
+                     rv32_auipc ? `WB_MUX_ALU :
+                     (rv32_jal | rv32_jalr) ? `WB_MUX_PCPLUS4 :
+                     `WB_MUX_ALU; //默认ALU结果
+    assign alu_ctrl = alu_mask;
+    assign load_type = funct3;
+    assign store_type = funct3;
+    assign branch_type = funct3;
+    
 
 
 endmodule
