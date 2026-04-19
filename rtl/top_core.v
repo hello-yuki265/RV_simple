@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 02:37:58
+ * @LastEditTime : 2026-04-19 11:06:25
  * @FilePath     : \RV_simple\rtl\top_core.v
  * @Description  : 
  *************************************************************************/
@@ -25,8 +25,9 @@ module top_core(
     // ------------------
     // PC指针
     // ------------------
-    reg [7:0] pc;
-    wire [7:0] pc_plus4;
+    wire [1:0]pc_src;
+    reg [31:0] pc;
+    wire [31:0] pc_plus4;
 
     // --------------------------
     // 指令定义
@@ -53,7 +54,20 @@ module top_core(
     // -----------------------
     // ctrl_unit接口
     // -----------------------
-    wire [1:0]pc_src;
+    wire is_load;
+    wire is_imm;
+    wire is_store;
+    wire is_rtype;
+    wire is_btype;
+    wire is_jtype;
+    wire is_jalr;
+    wire is_lui;
+    wire is_auipc;
+    wire [2:0] load_type;
+    wire [2:0] store_type;
+    wire [2:0] branch_type;
+    wire branch_jump;
+
     wire [1:0] res_src;
     wire mem_write;
     wire [3:0] alu_ctrl;
@@ -84,6 +98,7 @@ module top_core(
     // --------------------------
     // 控制单元
     // --------------------------
+
     ctrl_unit  ctrl_unit_inst (
     .clk(clk),
     .rst_n(rst_n),
@@ -91,7 +106,21 @@ module top_core(
     .funct3(funct3),
     .funct7(funct7),
     .alu_res(res),
-    .pc_src(pc_src),
+
+    .is_load(is_load),
+    .is_imm(is_imm),
+    .is_store(is_store),
+    .is_rtype(is_rtype),
+    .is_btype(is_btype),
+    .is_jtype(is_jtype),
+    .is_jalr(is_jalr),
+    .is_lui(is_lui),
+    .is_auipc(is_auipc),
+
+    .load_type(load_type),
+    .store_type(store_type),
+    .branch_type(branch_type),
+
     .res_src(res_src),
     .mem_write(mem_write),
     .alu_ctrl(alu_ctrl),
@@ -127,6 +156,9 @@ module top_core(
         end
     end
     assign pc_plus4 = pc + 4;
+    assign pc_src = (is_btype & branch_jump) | is_jtype ? `PC_MUX_PLUSIMM : 
+                    is_jalr ? `PC_MUX_ALU : `PC_MUX_NORM;
+    
 
     inst_mem  inst_mem_inst (
     .pc(pc),
@@ -169,7 +201,9 @@ module top_core(
     .alu_ctrl(alu_ctrl),
     .src0(src0),
     .src1(src1),
-    .res(res)
+    .branch_type(branch_type),
+    .res(res),
+    .branch_jump(branch_jump)
     );
 
     // -----------------------------
@@ -182,6 +216,8 @@ module top_core(
     .rst_n(rst_n),
     .addr(res),
     .w_en(w_en),
+    .load_type(load_type),
+    .store_type(store_type),
     .w_data(mem_w_data),
     .rd_data(mem_r_data)
     );

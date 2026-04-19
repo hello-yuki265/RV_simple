@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 13:02:36
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 02:38:08
+ * @LastEditTime : 2026-04-19 11:04:10
  * @FilePath     : \RV_simple\rtl\ctrl_unit.v
  * @Description  : 
  *************************************************************************/
@@ -21,7 +21,19 @@ module ctrl_unit (
     // -----------------
     // 控制信号输出
     // -----------------
-    output reg [1:0]pc_src,
+    output reg is_load,
+    output reg is_imm,
+    output reg is_store,
+    output reg is_rtype,
+    output reg is_btype,
+    output reg is_jtype,
+    output reg is_jalr,
+    output reg is_lui,
+    output reg is_auipc,
+    output reg [2:0] load_type,
+    output reg [2:0] store_type,
+    output reg [2:0] branch_type,
+
     output reg [1:0]res_src,
     output reg mem_write,
     output reg [3:0]alu_ctrl,
@@ -45,15 +57,8 @@ module ctrl_unit (
     localparam [6:0] OPC_LOAD   = 7'b0000011; 
     
     //I-type算术逻辑指令: 
-    // --addi
-    // --slli
-    // --slti
-    // --sltiu
-    // --xori
-    // --srli
-    // --srai
-    // --ori
-    // --andi
+    // --addi, slli, slti, sltiu, 
+    // --xori, srli, srai, ori, andi
     localparam [6:0] OPC_OP_IMM = 7'b0010011;  
     
     //Store指令 (S-type): 
@@ -64,25 +69,12 @@ module ctrl_unit (
     localparam [6:0] OPC_STORE  = 7'b0100011;  
     
     //R-type指令: 
-    // --add
-    // --sub
-    // --sll
-    // --slt
-    // --sltu
-    // --xor
-    // --srl
-    // --sra
-    // --or
-    // --and
+    // --add, sub, sll, slt, sltu,
+    // --xor, srl, sra, or, and
     localparam [6:0] OPC_REG    = 7'b0110011;   
 
     //Branch指令 (B-type)
-    // --beq
-    // --bne
-    // --blt
-    // --bge
-    // --bltu
-    // --bgeu
+    // --beq, bne, blt, bge, bltu, bgeu
     localparam [6:0] OPC_BRANCH = 7'b1100011;   
 
     //JAL指令 (J-type)
@@ -103,18 +95,6 @@ module ctrl_unit (
     // 对于RV32I，只使用funct7[5]，结合funct3与op，决定控制信号输出
     // =======================
     reg [1:0] alu_op;
-    reg jump;
-    reg is_load;
-    reg is_imm;
-    reg is_store;
-    reg is_rtype;
-    reg is_btype;
-    reg is_jtype;
-    reg is_jalr;
-    reg is_lui;
-    reg is_auipc;
-    reg [2:0]branch_type;
-
 
     always @(*) begin: decode_opc_proc
         is_load = 0;
@@ -126,12 +106,15 @@ module ctrl_unit (
         is_jalr = 0;
         is_lui = 0;
         is_auipc = 0;
+        load_type = 0;
+        store_type = 0;
         branch_type = 0;
 
         case (op_code)
             OPC_LOAD: begin
                 // I-type指令 (Load)
                 is_load = 1;
+                load_type = funct3;
             end
             OPC_OP_IMM: begin
                 // I-type算术逻辑指令
@@ -140,6 +123,7 @@ module ctrl_unit (
             OPC_STORE: begin
                 // Store指令 (S-type)
                 is_store = 1; 
+                store_type = funct3;
             end
             OPC_REG: begin
                 // R-type指令
@@ -164,33 +148,20 @@ module ctrl_unit (
             OPC_AUIPC: begin
                 is_auipc = 1;
             end
-            // op_list[6]: begin
-            //     // JALR指令 (I-type)
-            // end
-            // op_list[7]: begin
-            //     // LUI指令 (U-type)
-            // end
-            // op_list[8]: begin
-            //     // AUIPC指令 (U-type)
-            // end
             default: begin
                 // 默认情况
             end
         endcase
     end
 
-    reg branch_jump;
     always @(*) begin: main_sig_proc
         res_src = `WB_MUX_MEM;
         mem_write = 0;
         alu_op = 0;
-        pc_src = `PC_MUX_NORM;
         alu0_src = `ALU_MUX_SRC0_RS1;
         alu1_src = `ALU_MUX_SRC1_RS2;
         imm_src = `IMM_MUX_I;
         reg_write = 0;
-        branch_jump = 0;
-        jump = 0;
 
         if (is_load) begin
             // LOAD_TYPE
@@ -208,64 +179,27 @@ module ctrl_unit (
             alu1_src = `ALU_MUX_SRC1_IMM;
         end else if (is_store) begin
             alu_op = 2'b00;
-            reg_write = 0;
-            imm_src = `IMM_MUX_S; //使用31:25，11:7共12位作为立即数
-            alu1_src = `ALU_MUX_SRC1_IMM; //使用立即数进行计算
+            imm_src = `IMM_MUX_S; 
+            alu1_src = `ALU_MUX_SRC1_IMM; 
             mem_write = 1;
         end else if (is_rtype) begin 
             alu_op = 2'b10;
             reg_write = 1;
-            // imm_src = `IMM_MUX_6;
-            mem_write = 0;
             res_src = `WB_MUX_ALU;
         end else if (is_btype) begin
             alu_op = 2'b01;
             imm_src = `IMM_MUX_B;
-            
-            case (branch_type)
-                3'b000: begin
-                    // beq
-                    branch_jump = alu_res == 0;
-                end
-                3'b001: begin
-                    // bne
-                    branch_jump = alu_res != 0;
-                end
-                3'b100: begin
-                    // blt
-                    branch_jump = $signed(alu_res) < 32'sb0;
-                end
-                3'b101: begin
-                    // bge
-                    branch_jump = $signed(alu_res) >= 32'sb0;
-                end
-                3'b110: begin
-                    // bltu
-                    branch_jump = alu_res < 32'b0;
-                end
-                3'b111: begin
-                    // bgeu
-                    branch_jump = alu_res >= 32'b0;
-                end
-                default: begin
-                    branch_jump = 0;
-                end
-            endcase
-
-            pc_src = branch_jump ? `PC_MUX_PLUSIMM : `PC_MUX_NORM;
         end else if (is_jtype) begin
             alu_op = 2'b00;
             imm_src = `IMM_MUX_J;
             reg_write = 1;
             res_src = `WB_MUX_PCPLUS4;
-            pc_src = `PC_MUX_PLUSIMM;
         end else if (is_jalr) begin
             alu_op = 2'b00;
             imm_src = `IMM_MUX_I;
             reg_write = 1;
             res_src = `WB_MUX_PCPLUS4;
             alu1_src = `ALU_MUX_SRC1_IMM;
-            pc_src = `PC_MUX_ALU;
         end else if (is_lui) begin 
             alu_op = 2'b00;
             imm_src = `IMM_MUX_U;
