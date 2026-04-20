@@ -4,18 +4,16 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 13:02:36
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 15:00:08
+ * @LastEditTime : 2026-04-21 01:30:22
  * @FilePath     : \RV_simple\rtl\ctrl_unit.v
  * @Description  : 
  *************************************************************************/
-
+`include "glb_define.v"
 module ctrl_unit (
     input clk,
     input rst_n,
 
-    input [6:0] op_code,
-    input [2:0] funct3,
-    input [6:0] funct7,
+    input [31:0] rv32_instr,
 
     // -----------------
     // 控制信号输出
@@ -29,11 +27,13 @@ module ctrl_unit (
     output is_jalr,
     output is_lui,
     output is_auipc,
+    output is_system,
     output [2:0] load_type,
     output [2:0] store_type,
     output [2:0] branch_type,
+    output [`CSR_DEC_INFO_WIDTH-1:0] csr_dec_bus,
 
-    output [1:0]res_src,
+    output [`WB_MUX_WIDTH-1:0]res_src,
     output mem_write,
     output [9:0]alu_ctrl,
     output alu0_src,
@@ -41,14 +41,11 @@ module ctrl_unit (
     output [2:0]imm_src,
     output reg_write
 );
-    `include "glb_define.v"
-
     // =======================
     // 指令opcode分类
     // =======================
     //I-type加载指令: 
     // --lw
-    // TODO INSTR:
     // --lb
     // --lh
     // --lbu
@@ -62,7 +59,6 @@ module ctrl_unit (
     
     //Store指令 (S-type): 
     // --sw
-    // TODO INSTR:
     // --sb
     // --sh
     localparam [6:0] OPC_STORE  = 7'b0100011;  
@@ -87,13 +83,21 @@ module ctrl_unit (
     localparam [6:0] OPC_LUI   = 7'b0110111;   
 
     // AUIPC指令(U-type)
-    localparam [6:0] OPC_AUIPC   = 7'b0010111;   
+    localparam [6:0] OPC_AUIPC   = 7'b0010111;  
+    
+    // system instructions
+    localparam [6:0] OPC_SYSTEM = 7'b1110011;
 
     // =======================
     // 指令解析
     // 对于RV32I，只使用funct7[5]，结合funct3与op，决定控制信号输出
     // =======================
-    reg [1:0] alu_op;
+    wire [6:0] funct7   = rv32_instr[31:25];
+    wire [4:0] rs2      = rv32_instr[24:20];
+    wire [4:0] rs1      = rv32_instr[19:15];
+    wire [2:0] funct3   = rv32_instr[14:12];
+    wire [4:0] rd       = rv32_instr[11:7];
+    wire [6:0] op_code  = rv32_instr[6:0];
 
     assign is_load      = op_code == OPC_LOAD;
     assign is_imm       = op_code == OPC_OP_IMM;
@@ -104,6 +108,7 @@ module ctrl_unit (
     assign is_jalr      = op_code == OPC_JALR;
     assign is_lui       = op_code == OPC_LUI;
     assign is_auipc     = op_code == OPC_AUIPC;
+    assign is_system    = op_code == OPC_SYSTEM;
 
     wire funct3_000 = (funct3 == 3'b000);
     wire funct3_001 = (funct3 == 3'b001);
@@ -153,15 +158,15 @@ module ctrl_unit (
     // --------------------------------------
     // op_imm
     // --------------------------------------
-    wire rv32_addi = is_imm & funct3_000;
-    wire rv32_slli = is_imm & funct3_001 & funct7_0000000;
-    wire rv32_slti = is_imm & funct3_010;
-    wire rv32_sltiu = is_imm & funct3_011;
-    wire rv32_xori = is_imm & funct3_100;
-    wire rv32_srli = is_imm & funct3_101 & funct7_0000000;
-    wire rv32_srai = is_imm & funct3_101 & funct7_0100000;
-    wire rv32_ori = is_imm & funct3_110;
-    wire rv32_andi = is_imm & funct3_111;
+    wire rv32_addi      = is_imm & funct3_000;
+    wire rv32_slli      = is_imm & funct3_001 & funct7_0000000;
+    wire rv32_slti      = is_imm & funct3_010;
+    wire rv32_sltiu     = is_imm & funct3_011;
+    wire rv32_xori      = is_imm & funct3_100;
+    wire rv32_srli      = is_imm & funct3_101 & funct7_0000000;
+    wire rv32_srai      = is_imm & funct3_101 & funct7_0100000;
+    wire rv32_ori       = is_imm & funct3_110;
+    wire rv32_andi      = is_imm & funct3_111;
 
     // --------------------------------------
     // auipc
@@ -208,6 +213,19 @@ module ctrl_unit (
     // jal
     wire rv32_jal = is_jtype;
 
+    // system
+    wire rv32_ecall  = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0000);
+    wire rv32_ebreak = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0001);
+    // wire uret = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0010);
+    // wire sret = is_system & funct3_000 & (rv32_instr[31:20] == 12'd258);
+    // wire mret = is_system & funct3_000 & (rv32_instr[31:20] == 12'd770);
+    wire rv32_csrrw    = is_system & funct3_001; 
+    wire rv32_csrrs    = is_system & funct3_010; 
+    wire rv32_csrrc    = is_system & funct3_011; 
+    wire rv32_csrrwi   = is_system & funct3_101; 
+    wire rv32_csrrsi   = is_system & funct3_110; 
+    wire rv32_csrrci   = is_system & funct3_111; 
+
 
     // ---------------------------------------
     // ALU Contral logic
@@ -226,11 +244,14 @@ module ctrl_unit (
     assign alu_mask[`ALU_MASK_OR ] = rv32_or | rv32_ori;
     assign alu_mask[`ALU_MASK_AND] = rv32_and | rv32_andi;
 
+    // =================================================
+    // Main Control Logic
+    // =================================================
     // ----------------------------------------
     // main ctrl logic
     // ----------------------------------------
     assign mem_write = is_store;
-    assign reg_write =  is_load | is_imm | is_rtype | is_jtype | is_jalr | is_lui | is_auipc;
+    assign reg_write =  is_load | is_imm | is_rtype | is_jtype | is_jalr | is_lui | is_auipc | is_system;
 
     assign alu0_src = rv32_auipc ? `ALU_MUX_SRC0_PC : `ALU_MUX_SRC0_RS1;
     assign alu1_src = (is_imm | is_load | is_store | rv32_auipc) ? `ALU_MUX_SRC1_IMM : `ALU_MUX_SRC1_RS2;
@@ -244,11 +265,26 @@ module ctrl_unit (
                      rv32_lui ? `WB_MUX_IMM :
                      rv32_auipc ? `WB_MUX_ALU :
                      (rv32_jal | rv32_jalr) ? `WB_MUX_PCPLUS4 :
+                     is_system ? `WB_MUX_CSR :
                      `WB_MUX_ALU; //默认ALU结果
     assign alu_ctrl = alu_mask;
     assign load_type = funct3;
     assign store_type = funct3;
     assign branch_type = funct3;
+
+
+    // --------------------------------------
+    // Private/CSR
+    // --------------------------------------
+    
+    assign csr_dec_bus[`CSR_DEC_CSRRW] = rv32_csrrw;
+    assign csr_dec_bus[`CSR_DEC_CSRRS] = rv32_csrrs;
+    assign csr_dec_bus[`CSR_DEC_CSRRC] = rv32_csrrc;
+    assign csr_dec_bus[`CSR_DEC_CSRRWI] = rv32_csrrwi;
+    assign csr_dec_bus[`CSR_DEC_CSRRSI] = rv32_csrrsi;
+    assign csr_dec_bus[`CSR_DEC_CSRRCI] = rv32_csrrci;
+    assign csr_dec_bus[`CSR_DEC_RS1] = rs1;
+    assign csr_dec_bus[`CSR_DEC_IDX] = rv32_instr[31:20];
     
 
 

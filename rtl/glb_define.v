@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-18 16:36:22
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 14:49:44
+ * @LastEditTime : 2026-04-21 00:10:16
  * @FilePath     : \RV_simple\rtl\glb_define.v
  * @Description  : 
  *************************************************************************/
@@ -14,6 +14,10 @@
 
 // `define RV64I
 
+// ================================
+// 全局参数定义
+// ================================
+`define PC_WIDTH 32
 
 // ================================
 // ALU operation def
@@ -41,8 +45,26 @@
 `define ALU_SRA     (`ALU_OP_NUM'b00_1000_0000)
 `define ALU_OR      (`ALU_OP_NUM'b01_0000_0000)
 `define ALU_AND     (`ALU_OP_NUM'b10_0000_0000)
+
+// ===============================
+// Private / CSR
+// ===============================
+`define CSR_DEC_INFO_WIDTH       32
+`define CSR_DEC_CSRRW       31
+`define CSR_DEC_CSRRS       30
+`define CSR_DEC_CSRRC       29
+`define CSR_DEC_CSRRWI      28
+`define CSR_DEC_CSRRSI      27
+`define CSR_DEC_CSRRCI      26
+`define CSR_DEC_RS1         25:21
+`define CSR_DEC_IMM         25:21 // csr指令中rs1字段也可以作为立即数使用
+`define CSR_DEC_IDX         20:9
+
+`define MXLEN     32
+
+
 // ================================
-// MUX item def
+// datapath mux item def
 // ================================
 // -------------------
 // IMM_MUX
@@ -64,10 +86,12 @@
 // --------------------
 // WB_MUX
 // --------------------
-`define WB_MUX_MEM (2'b00)
-`define WB_MUX_ALU (2'b01)
-`define WB_MUX_PCPLUS4 (2'b10)
-`define WB_MUX_IMM (2'b11)
+`define WB_MUX_WIDTH 3
+`define WB_MUX_MEM `WB_MUX_WIDTH'd0
+`define WB_MUX_ALU `WB_MUX_WIDTH'd1
+`define WB_MUX_PCPLUS4 `WB_MUX_WIDTH'd2
+`define WB_MUX_IMM `WB_MUX_WIDTH'd3
+`define WB_MUX_CSR `WB_MUX_WIDTH'd4
 
 // -------------------
 // PC_MUX
