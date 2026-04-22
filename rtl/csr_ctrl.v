@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-20 23:24:30
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-21 00:20:34
+ * @LastEditTime : 2026-04-21 21:05:25
  * @FilePath     : \RV_simple\rtl\csr_ctrl.v
  * @Description  : 
  *************************************************************************/
@@ -42,24 +42,33 @@ module csr_ctrl(
     output [`MXLEN-1:0] csr_wb_dat;
     
     
-    wire csrrw = csr_dec_bus[`CSR_DEC_CSRRW];
-    wire csrrs = csr_dec_bus[`CSR_DEC_CSRRS];
-    wire csrrc = csr_dec_bus[`CSR_DEC_CSRRC];
+    wire csrrw = csr_dec_bus[`CSR_DEC_CSRRW] | csr_dec_bus[`CSR_DEC_CSRRWI];
+    wire csrrs = csr_dec_bus[`CSR_DEC_CSRRS] | csr_dec_bus[`CSR_DEC_CSRRSI];
+    wire csrrc = csr_dec_bus[`CSR_DEC_CSRRC] | csr_dec_bus[`CSR_DEC_CSRRCI];
     wire csrrwi = csr_dec_bus[`CSR_DEC_CSRRWI];
     wire csrrsi = csr_dec_bus[`CSR_DEC_CSRRSI];
     wire csrrci = csr_dec_bus[`CSR_DEC_CSRRCI];
-    wire [4:0] csrimm = csr_dec_bus[`CSR_DEC_IMM];
+    wire csr_isimm = csr_dec_bus[`CSR_DEC_CSRRWI] | csr_dec_bus[`CSR_DEC_CSRRSI] | csr_dec_bus[`CSR_DEC_CSRRCI];
+    wire [4:0] csr_rs1imm = csr_dec_bus[`CSR_DEC_RS1IMM];
+    wire [4:0] csr_rd = csr_dec_bus[`CSR_DEC_RD];
     assign csr_idx = csr_dec_bus[`CSR_DEC_IDX];
 
-    wire csr_wr_en = csrrw | csrrs | csrrc | csrrwi | csrrsi | csrrci;
-    wire csr_rd_en = csrrw | csrrs | csrrc | csrrwi | csrrsi | csrrci;
 
-    assign csr_wb_dat = csrrw ? csr_i_rs1_dat :
-                        csrrs ? (csr_rd_dat | csr_i_rs1_dat) :
-                        csrrc ? (csr_rd_dat & ~csr_i_rs1_dat) :
-                        csrrwi ? {27'b0, csrimm} :
-                        csrrsi ? (csr_rd_dat | {27'b0, csrimm}) :
-                        csrrci ? (csr_rd_dat & ~{27'b0, csrimm}) :
+    wire csr_wr_en = csrrw 
+                    // Only write while rs1 != x0 or imm != 0
+                    | ((csrrs | csrrc) & !(csr_rs1imm == 5'b0)); 
+                    
+                    // Only read while rd != x0
+    wire csr_rd_en = (csrrw & csr_rd != 5'b0) 
+                    | csrrs | csrrc;
+
+
+    assign csr_wb_dat = (csrrw & ~csr_isimm) ? csr_i_rs1_dat :
+                        (csrrs & ~csr_isimm) ? (csr_rd_dat | csr_i_rs1_dat) :
+                        (csrrc & ~csr_isimm) ? (csr_rd_dat & ~csr_i_rs1_dat) :
+                        csrrwi ? {27'b0, csr_rs1imm} :
+                        csrrsi ? (csr_rd_dat | {27'b0, csr_rs1imm}) :
+                        csrrci ? (csr_rd_dat & ~{27'b0, csr_rs1imm}) :
                         {`MXLEN{1'b0}};
 
 

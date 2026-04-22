@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 13:02:36
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-21 01:30:22
+ * @LastEditTime : 2026-04-22 12:58:55
  * @FilePath     : \RV_simple\rtl\ctrl_unit.v
  * @Description  : 
  *************************************************************************/
@@ -28,10 +28,14 @@ module ctrl_unit (
     output is_lui,
     output is_auipc,
     output is_system,
+    output is_trap,
+    output is_ret,
+    output is_csr,
     output [2:0] load_type,
     output [2:0] store_type,
     output [2:0] branch_type,
     output [`CSR_DEC_INFO_WIDTH-1:0] csr_dec_bus,
+    output [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus,
 
     output [`WB_MUX_WIDTH-1:0]res_src,
     output mem_write,
@@ -214,11 +218,15 @@ module ctrl_unit (
     wire rv32_jal = is_jtype;
 
     // system
+    
     wire rv32_ecall  = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0000);
     wire rv32_ebreak = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0001);
-    // wire uret = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0010);
-    // wire sret = is_system & funct3_000 & (rv32_instr[31:20] == 12'd258);
-    // wire mret = is_system & funct3_000 & (rv32_instr[31:20] == 12'd770);
+    assign is_trap = rv32_ecall | rv32_ebreak;
+    wire rv32_uret = is_system & funct3_000 & (rv32_instr[31:20] == 12'b0000_0000_0010);
+    wire rv32_sret = is_system & funct3_000 & (rv32_instr[31:20] == 12'd258);
+    wire rv32_mret = is_system & funct3_000 & (rv32_instr[31:20] == 12'd770);
+    assign is_ret = rv32_uret | rv32_sret | rv32_mret;
+    assign is_csr = is_system & (~funct3_000);
     wire rv32_csrrw    = is_system & funct3_001; 
     wire rv32_csrrs    = is_system & funct3_010; 
     wire rv32_csrrc    = is_system & funct3_011; 
@@ -276,15 +284,22 @@ module ctrl_unit (
     // --------------------------------------
     // Private/CSR
     // --------------------------------------
-    
     assign csr_dec_bus[`CSR_DEC_CSRRW] = rv32_csrrw;
     assign csr_dec_bus[`CSR_DEC_CSRRS] = rv32_csrrs;
     assign csr_dec_bus[`CSR_DEC_CSRRC] = rv32_csrrc;
     assign csr_dec_bus[`CSR_DEC_CSRRWI] = rv32_csrrwi;
     assign csr_dec_bus[`CSR_DEC_CSRRSI] = rv32_csrrsi;
     assign csr_dec_bus[`CSR_DEC_CSRRCI] = rv32_csrrci;
-    assign csr_dec_bus[`CSR_DEC_RS1] = rs1;
+    assign csr_dec_bus[`CSR_DEC_RS1IMM] = rs1;
+    assign csr_dec_bus[`CSR_DEC_RD] = rd;
     assign csr_dec_bus[`CSR_DEC_IDX] = rv32_instr[31:20];
+
+    assign trap_dec_bus[`TRAP_DEC_ECALL] = rv32_ecall;
+    assign trap_dec_bus[`TRAP_DEC_EBREAK] = rv32_ebreak;
+    assign trap_dec_bus[`TRAP_DEC_URET] = rv32_uret;
+    assign trap_dec_bus[`TRAP_DEC_SRET] = rv32_sret;
+    assign trap_dec_bus[`TRAP_DEC_MRET] = rv32_mret;
+
     
 
 

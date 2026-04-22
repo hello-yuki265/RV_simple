@@ -147,9 +147,9 @@ CSR 相关数据流现在是：
 
 `top_core.v` 已经预留了：
 
-- `sgl_cause_en`
-- `sgl_mepc_en`
-- `sgl_mscratch_en`
+- `trap_cause_en`
+- `trap_mepc_en`
+- `trap_mscratch_en`
 
 但当前 `csr_inst` 实例化时直接把这些入口绑成了 `0`，所以异常/陷入写 CSR 这条线还没有真正接通。
 

@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-21 01:28:26
+ * @LastEditTime : 2026-04-22 13:12:24
  * @FilePath     : \RV_simple\rtl\top_core.v
  * @Description  : 
  *************************************************************************/
@@ -55,6 +55,8 @@ module top_core(
     // csr接口
     // -----------------------
     wire [`MXLEN-1:0] csr_rd_dat;
+    wire [`MXLEN-1:0] csr_stl_mtvec_val;
+    wire [`MXLEN-1:0] csr_stl_mepc_val;
 
 
 
@@ -71,9 +73,14 @@ module top_core(
     wire is_lui;
     wire is_auipc;
     wire is_system;
+    wire is_trap;
+    wire is_ret;
+    wire is_csr;
     wire [2:0] load_type;
     wire [2:0] store_type;
     wire [2:0] branch_type;
+    wire [`CSR_DEC_INFO_WIDTH-1:0] csr_dec_bus;
+    wire [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus;
 
     wire [`WB_MUX_WIDTH-1:0] res_src;
     wire mem_write;
@@ -84,7 +91,7 @@ module top_core(
     wire reg_write;
 
     // ------------------------
-    // ALU接口
+    // EXU接口
     // ------------------------
     wire [31:0] alu_src0;
     wire [31:0] alu_src1;
@@ -96,17 +103,19 @@ module top_core(
 
     wire branch_jump;
 
-    wire [`CSR_DEC_INFO_WIDTH-1:0] csr_dec_bus;
     wire csr_wr_en;
     wire csr_rd_en;
     wire [11:0] csr_idx;
     wire [`MXLEN-1:0] csr_wb_dat;
 
-    wire sgl_cause_en;
-    wire [`MXLEN-1:0] sgl_cause_val;
-    wire sgl_mepc_en;
-    wire [`MXLEN-1:0] sgl_mepc_val;
-    wire sgl_mscratch_en;
+    wire  trap_cause_en;
+    wire  [`MXLEN-1:0] trap_cause_val;
+    wire  trap_mepc_en;
+    wire  [`MXLEN-1:0] trap_mepc_val;
+    wire  trap_mstatus_en;
+    wire  trap_mret_en;
+    wire  trap_mscratch_en;
+    wire  [`PC_WIDTH-1:0] trap_targ_pc;
 
 
     // -----------------------
@@ -138,10 +147,14 @@ module top_core(
     .is_lui(is_lui),
     .is_auipc(is_auipc),
     .is_system(is_system),
+    .is_trap(is_trap),
+    .is_ret(is_ret),
+    .is_csr(is_csr),
     .load_type(load_type),
     .store_type(store_type),
     .branch_type(branch_type),
     .csr_dec_bus(csr_dec_bus),
+    .trap_dec_bus(trap_dec_bus),
     .res_src(res_src),
     .mem_write(mem_write),
     .alu_ctrl(alu_ctrl),
@@ -149,7 +162,7 @@ module top_core(
     .alu1_src(alu1_src),
     .imm_src(imm_src),
     .reg_write(reg_write)
-    );
+  );
 
     // -----------------------------
     // IF取指
@@ -182,11 +195,15 @@ module top_core(
     .csr_rd_en(csr_rd_en),
     .csr_rd_dat(csr_rd_dat),
     .csr_idx(csr_idx),
-    .sgl_cause_en(0),
-    .sgl_cause_val(0),
-    .sgl_mepc_en(0),
-    .sgl_mepc_val(0),
-    .sgl_mscratch_en(0)
+    .sgl_cause_en(trap_cause_en),
+    .sgl_cause_val(trap_cause_val),
+    .sgl_mepc_en(trap_mepc_en),
+    .sgl_mepc_val(trap_mepc_val),
+    .sgl_mscratch_en(trap_mscratch_en),
+    .sgl_mstatus_en(trap_mstatus_en),
+    .sgl_mret_en(trap_mret_en),
+    .csr_stl_mtvec(csr_stl_mtvec_val),
+    .csr_stl_mepc(csr_stl_mepc_val)
     );
 
     // -----------------------------
@@ -207,12 +224,21 @@ module top_core(
     .csr_rd_dat(csr_rd_dat),
     .csr_idx(csr_idx),
     .csr_wb_dat(csr_wb_dat),
-    .sgl_cause_en(sgl_cause_en),
-    .sgl_cause_val(sgl_cause_val),
-    .sgl_mepc_en(sgl_mepc_en),
-    .sgl_mepc_val(sgl_mepc_val),
-    .sgl_mscratch_en(sgl_mscratch_en)
-  );
+    .trap_pc(pc),
+    .is_trap(is_trap),
+    .is_ret(is_ret),
+    .trap_dec_bus(trap_dec_bus),
+    .trap_i_mtvec_val(csr_stl_mtvec_val),
+    .trap_i_mepc_val(csr_stl_mepc_val),
+    .trap_cause_en(trap_cause_en),
+    .trap_cause_val(trap_cause_val),
+    .trap_mepc_en(trap_mepc_en),
+    .trap_mepc_val(trap_mepc_val),
+    .trap_mstatus_en(trap_mstatus_en),
+    .trap_mret_en(trap_mret_en),
+    .trap_mscratch_en(trap_mscratch_en),
+    .trap_targ_pc(trap_targ_pc)
+    );
 
     // -----------------------------
     // 访存
@@ -244,6 +270,7 @@ module top_core(
                 `PC_MUX_NORM: pc <= pc_plus4;
                 `PC_MUX_PLUSIMM: pc <= pc + imm;
                 `PC_MUX_ALU: pc <= alu_res & ~1; // jalr指令需要将最低位置0
+                `PC_MUX_TRAP: pc <= trap_targ_pc;
                 default: pc <= pc_plus4;
              endcase
             
@@ -251,7 +278,9 @@ module top_core(
     end
     assign pc_plus4 = pc + 4;
     assign pc_src = (is_btype & branch_jump) | is_jtype ? `PC_MUX_PLUSIMM : 
-                    is_jalr ? `PC_MUX_ALU : `PC_MUX_NORM;
+                    is_jalr ? `PC_MUX_ALU : 
+                    (is_trap | is_ret) ? `PC_MUX_TRAP : 
+                    `PC_MUX_NORM;
 
     // ------------------------
     // Write Back

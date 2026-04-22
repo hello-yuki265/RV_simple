@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-18 16:36:22
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-21 00:10:16
+ * @LastEditTime : 2026-04-21 16:31:59
  * @FilePath     : \RV_simple\rtl\glb_define.v
  * @Description  : 
  *************************************************************************/
@@ -56,11 +56,18 @@
 `define CSR_DEC_CSRRWI      28
 `define CSR_DEC_CSRRSI      27
 `define CSR_DEC_CSRRCI      26
-`define CSR_DEC_RS1         25:21
-`define CSR_DEC_IMM         25:21 // csr指令中rs1字段也可以作为立即数使用
-`define CSR_DEC_IDX         20:9
+`define CSR_DEC_RD          25:21
+`define CSR_DEC_RS1IMM      20:16 // csr指令中rs1字段也可以作为立即数使用
+`define CSR_DEC_IDX         15:4
 
 `define MXLEN     32
+
+`define TRAP_DEC_INFO_WIDTH    32
+`define TRAP_DEC_ECALL         31
+`define TRAP_DEC_EBREAK        30
+`define TRAP_DEC_URET          29
+`define TRAP_DEC_SRET          28
+`define TRAP_DEC_MRET          27
 
 
 // ================================
@@ -99,6 +106,7 @@
 `define PC_MUX_NORM (2'b00)
 `define PC_MUX_PLUSIMM  (2'b01)
 `define PC_MUX_ALU  (2'b10)
+`define PC_MUX_TRAP (2'b11)
 
 
 

@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-20 11:13:57
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-21 01:36:55
+ * @LastEditTime : 2026-04-22 12:38:08
  * @FilePath     : \RV_simple\rtl\exu.v
  * @Description  : 
  *************************************************************************/
@@ -45,11 +45,21 @@
     // ----------------
     // exp interface
     // ----------------
-    output sgl_cause_en,
-    output [`MXLEN-1:0] sgl_cause_val,
-    output sgl_mepc_en,
-    output [`MXLEN-1:0] sgl_mepc_val,
-    output sgl_mscratch_en
+    input [`PC_WIDTH-1:0] trap_pc,
+    input is_trap,
+    input is_ret,
+    output [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus,
+    input [`MXLEN-1:0] trap_i_mtvec_val,
+    input [`MXLEN-1:0] trap_i_mepc_val,
+    output trap_cause_en,
+    output [`MXLEN-1:0] trap_cause_val,
+    output trap_mepc_en,
+    output [`MXLEN-1:0] trap_mepc_val,
+    output trap_mstatus_en,
+    output trap_mret_en,
+    output trap_mscratch_en,
+    output [`PC_WIDTH-1:0] trap_targ_pc
+
 );
 
     alu  alu_inst (
@@ -108,5 +118,24 @@
     .csr_i_rs1_dat(exu_src0),
     .csr_rd_dat(csr_rd_dat),
     .csr_wb_dat(csr_wb_dat)
+    );
+
+    except  except_inst (
+    .clk(clk),
+    .rst_n(rst_n),
+    .trap_pc(trap_pc),
+    .is_trap(is_trap),
+    .is_ret(is_ret),
+    .trap_dec_bus(trap_dec_bus),
+    .trap_i_mtvec_val(trap_i_mtvec_val),
+    .trap_i_mepc_val(trap_i_mepc_val),
+    .trap_cause_en(trap_cause_en),
+    .trap_cause_val(trap_cause_val),
+    .trap_mepc_en(trap_mepc_en),
+    .trap_mepc_val(trap_mepc_val),
+    .trap_mstatus_en(trap_mstatus_en),
+    .trap_mret_en(trap_mret_en),
+    .trap_mscratch_en(trap_mscratch_en),
+    .trap_targ_pc(trap_targ_pc)
     );
 endmodule

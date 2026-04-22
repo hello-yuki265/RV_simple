@@ -27,6 +27,8 @@ module tb_rv32i_check;
     localparam [11:0] CSR_MTVEC    = 12'h305;
 
     localparam [31:0] NOP = 32'h00000013;
+    localparam [31:0] INST_ECALL = 32'h00000073;
+    localparam [31:0] INST_MRET  = 32'h30200073;
 
     function automatic [31:0] encode_r(
         input [6:0] funct7,
@@ -196,6 +198,23 @@ module tb_rv32i_check;
                 fail_count = fail_count + 1;
             end else begin
                 $display("PASS %-24s = 0x%08h", label, actual);
+                pass_count = pass_count + 1;
+            end
+        end
+    endtask
+
+    task automatic expect_pc(
+        input logic [31:0] expected,
+        input string label
+    );
+        logic [31:0] actual;
+        begin
+            actual = dut.pc;
+            if (actual !== expected) begin
+                $display("FAIL %-24s pc expected=0x%08h actual=0x%08h", label, expected, actual);
+                fail_count = fail_count + 1;
+            end else begin
+                $display("PASS %-24s pc = 0x%08h", label, actual);
                 pass_count = pass_count + 1;
             end
         end
@@ -568,18 +587,94 @@ module tb_rv32i_check;
         end
     endtask
 
+    task automatic test_ecall_trap_pc;
+        begin
+            $display("\n==== TEST: ECALL TRAP PC ====");
+            clear_state();
+
+            // x1 = 0x40, then mtvec <- x1
+            dut.inst_mem_inst.mem[0]  = encode_i(64, 5'd0, 3'b000, 5'd1, OPC_OP_IMM);
+            dut.inst_mem_inst.mem[1]  = encode_csr(CSR_MTVEC, 5'd1, 3'b001, 5'd0);
+
+            // normal instruction before ecall
+            dut.inst_mem_inst.mem[2]  = encode_i(16'h022, 5'd0, 3'b000, 5'd2, OPC_OP_IMM);
+
+            // ecall at PC = 0x0000000c
+            dut.inst_mem_inst.mem[3]  = INST_ECALL;
+
+            // this instruction should be skipped if trap jump works
+            dut.inst_mem_inst.mem[4]  = encode_i(16'h033, 5'd0, 3'b000, 5'd3, OPC_OP_IMM);
+
+            // trap handler at mtvec = 0x40 (instruction index 16)
+            dut.inst_mem_inst.mem[16] = encode_i(16'h044, 5'd0, 3'b000, 5'd4, OPC_OP_IMM);
+            dut.inst_mem_inst.mem[17] = encode_i(16'h055, 5'd0, 3'b000, 5'd5, OPC_OP_IMM);
+
+            apply_reset();
+
+            // Execute up to and including ECALL; PC should jump to mtvec immediately after ECALL.
+            run_cycles(4);
+            expect_csr(dut.csr_inst.csr_mtvec, 32'h00000040, "mtvec setup");
+            expect_pc(32'h00000040, "pc jump to trap");
+
+            // Sanity check: instruction before ecall executed; instruction after ecall not executed.
+            expect_reg(2, 32'h00000022, "before ecall");
+            expect_reg(3, 32'h00000000, "after ecall skipped");
+
+            // Execute trap handler instructions.
+            run_cycles(2);
+            expect_reg(4, 32'h00000044, "trap handler step0");
+            expect_reg(5, 32'h00000055, "trap handler step1");
+        end
+    endtask
+
+    task automatic test_mret_return_pc;
+        begin
+            $display("\n==== TEST: MRET RETURN PC ====");
+            clear_state();
+
+            // x1 = 0x40, then mtvec <- x1
+            dut.inst_mem_inst.mem[0]  = encode_i(64, 5'd0, 3'b000, 5'd1, OPC_OP_IMM);
+            dut.inst_mem_inst.mem[1]  = encode_csr(CSR_MTVEC, 5'd1, 3'b001, 5'd0);
+
+            // x2 = 0x24, then mepc <- x2
+            dut.inst_mem_inst.mem[2]  = encode_i(36, 5'd0, 3'b000, 5'd2, OPC_OP_IMM);
+            dut.inst_mem_inst.mem[3]  = encode_csr(CSR_MEPC, 5'd2, 3'b001, 5'd0);
+
+            // mret should jump to mepc (0x24)
+            dut.inst_mem_inst.mem[4]  = INST_MRET;
+
+            // should be skipped if mret return works
+            dut.inst_mem_inst.mem[5]  = encode_i(16'h033, 5'd0, 3'b000, 5'd3, OPC_OP_IMM);
+
+            // expected mret target @ PC=0x24 (index 9)
+            dut.inst_mem_inst.mem[9]  = encode_i(16'h044, 5'd0, 3'b000, 5'd4, OPC_OP_IMM);
+
+            // trap vector target @ PC=0x40 (index 16)
+            dut.inst_mem_inst.mem[16] = encode_i(16'h055, 5'd0, 3'b000, 5'd5, OPC_OP_IMM);
+
+            apply_reset();
+
+            // Execute up to and including MRET.
+            run_cycles(5);
+            expect_csr(dut.csr_inst.csr_mepc, 32'h00000024, "mepc setup");
+            expect_pc(32'h00000024, "pc jump by mret");
+
+            // Execute one instruction at the return target.
+            run_cycles(1);
+            expect_reg(4, 32'h00000044, "mret target executed");
+            expect_reg(5, 32'h00000000, "mtvec path not taken");
+            expect_reg(3, 32'h00000000, "post-mret sequential skipped");
+        end
+    endtask
+
     initial begin
         clk = 1'b0;
         rst_n = 1'b0;
         fail_count = 0;
         pass_count = 0;
 
-        test_alu_ops();
-        test_load_store();
-        test_control_flow();
-        test_branch_signedness();
-        test_csr_ops();
-        test_csr_rd_writeback();
+        test_ecall_trap_pc();
+        test_mret_return_pc();
 
         $display("\n==== SUMMARY ====");
         $display("PASS COUNT = %0d", pass_count);
