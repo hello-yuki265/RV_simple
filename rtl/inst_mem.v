@@ -4,17 +4,17 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 12:08:07
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 02:37:18
+ * @LastEditTime : 2026-04-22 21:06:31
  * @FilePath     : \RV_simple\rtl\inst_mem.v
  * @Description  : 
  *************************************************************************/
-
+`include "glb_define.v"
 module inst_mem(
     input [31:0] pc,
     output [31 : 0] instr
 );
 
-    reg [31 : 0] mem [0 : 127];
+    reg [31 : 0] mem [0 : `VLD_PC_NUM-1];
     
     initial begin
         mem[0] = 32'h00200093;  // NOP

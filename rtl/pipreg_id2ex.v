@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-22 15:27:21
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-22 16:43:03
+ * @LastEditTime : 2026-04-22 19:28:07
  * @FilePath     : \RV_simple\rtl\pipreg_id2ex.v
  * @Description  : 
  *************************************************************************/
@@ -13,6 +13,8 @@
     input clk,
     input rst_n,
 
+    input [31:0] d_pc,
+    output reg [31:0] q_pc,
     // --------------------
     // ctrlu signals
     // --------------------
@@ -39,8 +41,9 @@
     input [9:0] d_ctrlu_alu_ctrl,
     input d_ctrlu_alu0_src,
     input d_ctrlu_alu1_src,
-    input [2:0] d_ctrlu_imm_src,
     input d_ctrlu_reg_write,
+
+    
 
     output reg q_ctrlu_is_load,
     output reg q_ctrlu_is_imm,
@@ -65,17 +68,29 @@
     output reg [9:0] q_ctrlu_alu_ctrl,
     output reg q_ctrlu_alu0_src,
     output reg q_ctrlu_alu1_src,
-    output reg [2:0] q_ctrlu_imm_src,
     output reg q_ctrlu_reg_write,
+
+    // -------------------
+    // imm extend
+    // -------------------
+    input [31:0] d_imm,
+    output reg [31:0] q_imm,
+
 
     // -------------------------
     // regfile signals
     // -------------------------
     input [31:0] d_regf_rs1_data,
     input [31:0] d_regf_rs2_data,
+    input [4:0]  d_regf_rd,
+    input [31:0] d_regf_rd_data,
+    input        d_regf_rd_write,
 
     output reg [31:0] q_regf_rs1_data,
     output reg [31:0] q_regf_rs2_data,
+    output reg [4:0]  q_regf_rd,
+    output reg [31:0] q_regf_rd_data, 
+    output reg        q_regf_rd_write,
 
     // -------------------------
     // CSR signals
@@ -89,6 +104,9 @@
     output reg [`MXLEN-1:0]  q_csr_stl_mepc
 );
 
+    always @(posedge clk) begin
+        q_pc <= d_pc;
+    end
     always @(posedge clk) begin
         // --------------------
         // ctrlu signals
@@ -116,13 +134,19 @@
         q_ctrlu_alu_ctrl     <= d_ctrlu_alu_ctrl;
         q_ctrlu_alu0_src     <= d_ctrlu_alu0_src;
         q_ctrlu_alu1_src     <= d_ctrlu_alu1_src;
-        q_ctrlu_imm_src      <= d_ctrlu_imm_src;
         q_ctrlu_reg_write    <= d_ctrlu_reg_write;
+    end
+
+    always @(posedge clk) begin
+        q_imm <= d_imm;
     end
 
     always @(posedge clk) begin
         q_regf_rs1_data <= d_regf_rs1_data;
         q_regf_rs2_data <= d_regf_rs2_data;
+        q_regf_rd       <= d_regf_rd;
+        q_regf_rd_data  <= d_regf_rd_data;
+        q_regf_rd_write <= d_regf_rd_write;
     end
 
     always @(posedge clk) begin

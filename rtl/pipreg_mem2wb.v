@@ -13,6 +13,16 @@ module pipreg_mem2wb(
     input clk,
     input rst_n,
 
+    input d_ctrlu_reg_write,
+    input [`WB_MUX_WIDTH-1:0] d_ctrlu_res_src,
+    input [31:0] d_mem_rd_data,
+    input [31:0] d_exu_alu_res,
+
+    output reg q_ctrlu_reg_write,
+    output reg [`WB_MUX_WIDTH-1:0] q_ctrlu_res_src,
+    output reg [31:0] q_mem_rd_data,
+    output reg [31:0] q_exu_alu_res,
+
     input [4:0] d_core_rd,
     input [31:0] d_core_pc_plus4,
     input [31:0] d_core_imm,
@@ -27,11 +37,21 @@ module pipreg_mem2wb(
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            q_ctrlu_reg_write <= 1'b0;
+            q_ctrlu_res_src   <= `WB_MUX_WIDTH'b0;
+            q_mem_rd_data     <= 32'b0;
+            q_exu_alu_res     <= 32'b0;
+
             q_core_rd       <= 5'b0;
             q_core_pc_plus4 <= 32'b0;
             q_core_imm      <= 32'b0;
             q_csr_rd_dat    <= `MXLEN'b0;
         end else begin
+            q_ctrlu_reg_write <= d_ctrlu_reg_write;
+            q_ctrlu_res_src   <= d_ctrlu_res_src;
+            q_mem_rd_data     <= d_mem_rd_data;
+            q_exu_alu_res     <= d_exu_alu_res;
+
             q_core_rd       <= d_core_rd;
             q_core_pc_plus4 <= d_core_pc_plus4;
             q_core_imm      <= d_core_imm;

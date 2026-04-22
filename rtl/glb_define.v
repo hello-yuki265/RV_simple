@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-18 16:36:22
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-21 16:31:59
+ * @LastEditTime : 2026-04-22 21:06:15
  * @FilePath     : \RV_simple\rtl\glb_define.v
  * @Description  : 
  *************************************************************************/
@@ -18,6 +18,7 @@
 // 全局参数定义
 // ================================
 `define PC_WIDTH 32
+`define VLD_PC_NUM     1024
 
 // ================================
 // ALU operation def
