@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 12:11:10
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-19 02:39:00
+ * @LastEditTime : 2026-04-22 15:53:41
  * @FilePath     : \RV_simple\rtl\regfile.v
  * @Description  : 
  *************************************************************************/
@@ -47,9 +47,14 @@ module regfile(
 
     // --------------------
     // 读取寄存器堆
+    // 这里判断rs1==rd一起解决了访存的流水冲突
     // --------------------
-    assign rs1_data = register[rs1];
-    assign rs2_data = register[rs2];
+    assign rs1_data = rs1 == 5'b0 ? 32'b0 : 
+                        (rs1 == rd) ? rd_data :
+                        register[rs1];
+    assign rs2_data = rs2 == 5'b0 ? 32'b0 : 
+                        (rs2 == rd) ? rd_data : 
+                        register[rs2];
 
     // ----------------------
     // 写寄存器堆

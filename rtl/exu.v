@@ -48,7 +48,7 @@
     input [`PC_WIDTH-1:0] trap_pc,
     input is_trap,
     input is_ret,
-    output [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus,
+    input [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus,
     input [`MXLEN-1:0] trap_i_mtvec_val,
     input [`MXLEN-1:0] trap_i_mepc_val,
     output trap_cause_en,

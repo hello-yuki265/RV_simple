@@ -122,7 +122,7 @@ module tb_rv32i_check;
         int idx;
         begin
             rst_n = 1'b0;
-            dut.pc = 32'b0;
+            dut.core_pc = 32'b0;
             for (idx = 0; idx < 128; idx = idx + 1) begin
                 dut.inst_mem_inst.mem[idx] = NOP;
             end
@@ -209,12 +209,12 @@ module tb_rv32i_check;
     );
         logic [31:0] actual;
         begin
-            actual = dut.pc;
+            actual = dut.core_pc;
             if (actual !== expected) begin
-                $display("FAIL %-24s pc expected=0x%08h actual=0x%08h", label, expected, actual);
+                $display("FAIL %-24s core_pc expected=0x%08h actual=0x%08h", label, expected, actual);
                 fail_count = fail_count + 1;
             end else begin
-                $display("PASS %-24s pc = 0x%08h", label, actual);
+                $display("PASS %-24s core_pc = 0x%08h", label, actual);
                 pass_count = pass_count + 1;
             end
         end
@@ -589,7 +589,7 @@ module tb_rv32i_check;
 
     task automatic test_ecall_trap_pc;
         begin
-            $display("\n==== TEST: ECALL TRAP PC ====");
+            $display("\n==== TEST: ECALL TRAP core_pc ====");
             clear_state();
 
             // x1 = 0x40, then mtvec <- x1
@@ -599,7 +599,7 @@ module tb_rv32i_check;
             // normal instruction before ecall
             dut.inst_mem_inst.mem[2]  = encode_i(16'h022, 5'd0, 3'b000, 5'd2, OPC_OP_IMM);
 
-            // ecall at PC = 0x0000000c
+            // ecall at core_pc = 0x0000000c
             dut.inst_mem_inst.mem[3]  = INST_ECALL;
 
             // this instruction should be skipped if trap jump works
@@ -611,10 +611,10 @@ module tb_rv32i_check;
 
             apply_reset();
 
-            // Execute up to and including ECALL; PC should jump to mtvec immediately after ECALL.
+            // Execute up to and including ECALL; core_pc should jump to mtvec immediately after ECALL.
             run_cycles(4);
             expect_csr(dut.csr_inst.csr_mtvec, 32'h00000040, "mtvec setup");
-            expect_pc(32'h00000040, "pc jump to trap");
+            expect_pc(32'h00000040, "core_pc jump to trap");
 
             // Sanity check: instruction before ecall executed; instruction after ecall not executed.
             expect_reg(2, 32'h00000022, "before ecall");
@@ -629,7 +629,7 @@ module tb_rv32i_check;
 
     task automatic test_mret_return_pc;
         begin
-            $display("\n==== TEST: MRET RETURN PC ====");
+            $display("\n==== TEST: MRET RETURN core_pc ====");
             clear_state();
 
             // x1 = 0x40, then mtvec <- x1
@@ -646,10 +646,10 @@ module tb_rv32i_check;
             // should be skipped if mret return works
             dut.inst_mem_inst.mem[5]  = encode_i(16'h033, 5'd0, 3'b000, 5'd3, OPC_OP_IMM);
 
-            // expected mret target @ PC=0x24 (index 9)
+            // expected mret target @ core_pc=0x24 (index 9)
             dut.inst_mem_inst.mem[9]  = encode_i(16'h044, 5'd0, 3'b000, 5'd4, OPC_OP_IMM);
 
-            // trap vector target @ PC=0x40 (index 16)
+            // trap vector target @ core_pc=0x40 (index 16)
             dut.inst_mem_inst.mem[16] = encode_i(16'h055, 5'd0, 3'b000, 5'd5, OPC_OP_IMM);
 
             apply_reset();
@@ -657,7 +657,7 @@ module tb_rv32i_check;
             // Execute up to and including MRET.
             run_cycles(5);
             expect_csr(dut.csr_inst.csr_mepc, 32'h00000024, "mepc setup");
-            expect_pc(32'h00000024, "pc jump by mret");
+            expect_pc(32'h00000024, "core_pc jump by mret");
 
             // Execute one instruction at the return target.
             run_cycles(1);

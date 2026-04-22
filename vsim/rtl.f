@@ -11,4 +11,5 @@
 ../rtl/csr.v
 ../rtl/except.v
 ../rtl/exu.v
+../rtl/pipreg_ex2mem.v
 ../rtl/top_core.v
