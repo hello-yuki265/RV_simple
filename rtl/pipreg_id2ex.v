@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-22 15:27:21
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-22 19:28:07
+ * @LastEditTime : 2026-04-23 13:48:43
  * @FilePath     : \RV_simple\rtl\pipreg_id2ex.v
  * @Description  : 
  *************************************************************************/
@@ -12,6 +12,7 @@
  module pipreg_id2ex(
     input clk,
     input rst_n,
+    input flush,
 
     input [31:0] d_pc,
     output reg [31:0] q_pc,
@@ -80,12 +81,16 @@
     // -------------------------
     // regfile signals
     // -------------------------
+    input [4:0] d_regf_rs1,
+    input [4:0] d_regf_rs2,
     input [31:0] d_regf_rs1_data,
     input [31:0] d_regf_rs2_data,
     input [4:0]  d_regf_rd,
     input [31:0] d_regf_rd_data,
     input        d_regf_rd_write,
 
+    output reg [4:0] q_regf_rs1,
+    output reg [4:0] q_regf_rs2,
     output reg [31:0] q_regf_rs1_data,
     output reg [31:0] q_regf_rs2_data,
     output reg [4:0]  q_regf_rd,
@@ -104,10 +109,67 @@
     output reg [`MXLEN-1:0]  q_csr_stl_mepc
 );
 
-    always @(posedge clk) begin
-        q_pc <= d_pc;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            q_pc <= 32'b0;
+        end else if (flush) begin
+            q_pc <= 32'b0;
+        end else begin
+            q_pc <= d_pc;
+        end
     end
-    always @(posedge clk) begin
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            q_ctrlu_is_load      <= 1'b0;
+            q_ctrlu_is_imm       <= 1'b0;
+            q_ctrlu_is_store     <= 1'b0;
+            q_ctrlu_is_rtype     <= 1'b0;
+            q_ctrlu_is_btype     <= 1'b0;
+            q_ctrlu_is_jtype     <= 1'b0;
+            q_ctrlu_is_jalr      <= 1'b0;
+            q_ctrlu_is_lui       <= 1'b0;
+            q_ctrlu_is_auipc     <= 1'b0;
+            q_ctrlu_is_system    <= 1'b0;
+            q_ctrlu_is_trap      <= 1'b0;
+            q_ctrlu_is_ret       <= 1'b0;
+            q_ctrlu_is_csr       <= 1'b0;
+            q_ctrlu_load_type    <= 3'b0;
+            q_ctrlu_store_type   <= 3'b0;
+            q_ctrlu_branch_type  <= 3'b0;
+            q_ctrlu_csr_dec_bus  <= `CSR_DEC_INFO_WIDTH'b0;
+            q_ctrlu_trap_dec_bus <= `TRAP_DEC_INFO_WIDTH'b0;
+            q_ctrlu_res_src      <= `WB_MUX_WIDTH'b0;
+            q_ctrlu_mem_write    <= 1'b0;
+            q_ctrlu_alu_ctrl     <= 10'b0;
+            q_ctrlu_alu0_src     <= 1'b0;
+            q_ctrlu_alu1_src     <= 1'b0;
+            q_ctrlu_reg_write    <= 1'b0;
+        end else if (flush) begin
+            q_ctrlu_is_load      <= 1'b0;
+            q_ctrlu_is_imm       <= 1'b0;
+            q_ctrlu_is_store     <= 1'b0;
+            q_ctrlu_is_rtype     <= 1'b0;
+            q_ctrlu_is_btype     <= 1'b0;
+            q_ctrlu_is_jtype     <= 1'b0;
+            q_ctrlu_is_jalr      <= 1'b0;
+            q_ctrlu_is_lui       <= 1'b0;
+            q_ctrlu_is_auipc     <= 1'b0;
+            q_ctrlu_is_system    <= 1'b0;
+            q_ctrlu_is_trap      <= 1'b0;
+            q_ctrlu_is_ret       <= 1'b0;
+            q_ctrlu_is_csr       <= 1'b0;
+            q_ctrlu_load_type    <= 3'b0;
+            q_ctrlu_store_type   <= 3'b0;
+            q_ctrlu_branch_type  <= 3'b0;
+            q_ctrlu_csr_dec_bus  <= `CSR_DEC_INFO_WIDTH'b0;
+            q_ctrlu_trap_dec_bus <= `TRAP_DEC_INFO_WIDTH'b0;
+            q_ctrlu_res_src      <= `WB_MUX_WIDTH'b0;
+            q_ctrlu_mem_write    <= 1'b0;
+            q_ctrlu_alu_ctrl     <= 10'b0;
+            q_ctrlu_alu0_src     <= 1'b0;
+            q_ctrlu_alu1_src     <= 1'b0;
+            q_ctrlu_reg_write    <= 1'b0;
+        end else begin
         // --------------------
         // ctrlu signals
         // --------------------
@@ -135,23 +197,60 @@
         q_ctrlu_alu0_src     <= d_ctrlu_alu0_src;
         q_ctrlu_alu1_src     <= d_ctrlu_alu1_src;
         q_ctrlu_reg_write    <= d_ctrlu_reg_write;
+        end
     end
 
-    always @(posedge clk) begin
-        q_imm <= d_imm;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            q_imm <= 32'b0;
+        end else if (flush) begin
+            q_imm <= 32'b0;
+        end else begin
+            q_imm <= d_imm;
+        end
     end
 
-    always @(posedge clk) begin
-        q_regf_rs1_data <= d_regf_rs1_data;
-        q_regf_rs2_data <= d_regf_rs2_data;
-        q_regf_rd       <= d_regf_rd;
-        q_regf_rd_data  <= d_regf_rd_data;
-        q_regf_rd_write <= d_regf_rd_write;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            q_regf_rs1      <= 5'b0;
+            q_regf_rs2      <= 5'b0;
+            q_regf_rs1_data <= 32'b0;
+            q_regf_rs2_data <= 32'b0;
+            q_regf_rd       <= 5'b0;
+            q_regf_rd_data  <= 32'b0;
+            q_regf_rd_write <= 1'b0;
+        end else if (flush) begin
+            q_regf_rs1      <= 5'b0;
+            q_regf_rs2      <= 5'b0;
+            q_regf_rs1_data <= 32'b0;
+            q_regf_rs2_data <= 32'b0;
+            q_regf_rd       <= 5'b0;
+            q_regf_rd_data  <= 32'b0;
+            q_regf_rd_write <= 1'b0;
+        end else begin
+            q_regf_rs1 <= d_regf_rs1;
+            q_regf_rs2 <= d_regf_rs2;
+            q_regf_rs1_data <= d_regf_rs1_data;
+            q_regf_rs2_data <= d_regf_rs2_data;
+            q_regf_rd       <= d_regf_rd;
+            q_regf_rd_data  <= d_regf_rd_data;
+            q_regf_rd_write <= d_regf_rd_write;
+        end
     end
 
-    always @(posedge clk) begin
-        q_csr_rd_dat    <= d_csr_rd_dat;
-        q_csr_stl_mtvec <= d_csr_stl_mtvec;
-        q_csr_stl_mepc  <= d_csr_stl_mepc;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            q_csr_rd_dat    <= `MXLEN'b0;
+            q_csr_stl_mtvec <= `MXLEN'b0;
+            q_csr_stl_mepc  <= `MXLEN'b0;
+        end else if (flush) begin
+            q_csr_rd_dat    <= `MXLEN'b0;
+            q_csr_stl_mtvec <= `MXLEN'b0;
+            q_csr_stl_mepc  <= `MXLEN'b0;
+        end else begin
+            q_csr_rd_dat    <= d_csr_rd_dat;
+            q_csr_stl_mtvec <= d_csr_stl_mtvec;
+            q_csr_stl_mepc  <= d_csr_stl_mepc;
+        end
     end
 endmodule

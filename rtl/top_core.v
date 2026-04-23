@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-22 20:28:00
+ * @LastEditTime : 2026-04-23 21:24:49
  * @FilePath     : \RV_simple\rtl\top_core.v
  * @Description  :
  *************************************************************************/
@@ -92,6 +92,8 @@ module top_core(
     wire [4:0] id_regf_rs2;
     wire [31:0] id_regf_rs1_data;
     wire [31:0] id_regf_rs2_data;
+    wire [31:0] id_regf_rs1_data_raw;
+    wire [31:0] id_regf_rs2_data_raw;
     wire [4:0] wb_regf_rd;
     wire wb_regf_rd_write;
 
@@ -152,6 +154,8 @@ module top_core(
     wire ex_ctrlu_alu0_src;
     wire ex_ctrlu_alu1_src;
     wire ex_ctrlu_reg_write;
+    wire [4:0] ex_regf_rs1;
+    wire [4:0] ex_regf_rs2;
     wire [31:0] ex_regf_rs1_data;
     wire [31:0] ex_regf_rs2_data;
     wire [4:0] ex_regf_rd;
@@ -239,6 +243,15 @@ module top_core(
     wire [31:0] wb_core_imm;
     wire [`MXLEN-1:0] wb_csr_rd_dat;
 
+    // ================================
+    // hazard ports
+    // ================================
+    wire [1:0] hzd_fd_rs1;
+    wire [1:0] hzd_fd_rs2;
+    wire flush_id2ex;
+    wire stall_if2id;
+    wire stall_if;
+
     // ===============================
     // module instances
     // ===============================
@@ -250,6 +263,9 @@ module top_core(
     pipreg_if2id pipreg_if2id_inst (
     .clk(clk),
     .rst_n(rst_n),
+    .flush(1'b0),
+    .stall(stall_if2id),
+
     .d_pc(if_pc),
     .d_instr(if_instr),
     .q_pc(id_pc),
@@ -302,9 +318,13 @@ module top_core(
     .rs2_data(id_regf_rs2_data)
     );
 
+    
+
     pipreg_id2ex pipreg_id2ex_inst (
     .clk(clk),
     .rst_n(rst_n),
+    .flush(flush_id2ex),
+
     .d_pc(id_pc),
     .q_pc(ex_pc),
 
@@ -361,11 +381,15 @@ module top_core(
     .d_imm(id_imm),
     .q_imm(ex_imm),
 
+    .d_regf_rs1(id_regf_rs1),
+    .d_regf_rs2(id_regf_rs2),
     .d_regf_rs1_data(id_regf_rs1_data),
     .d_regf_rs2_data(id_regf_rs2_data),
     .d_regf_rd(id_rd),
     .d_regf_rd_data(id_regf_rd_data_unused),
     .d_regf_rd_write(id_regf_rd_write_unused),
+    .q_regf_rs1(ex_regf_rs1),
+    .q_regf_rs2(ex_regf_rs2),
     .q_regf_rs1_data(ex_regf_rs1_data),
     .q_regf_rs2_data(ex_regf_rs2_data),
     .q_regf_rd(ex_regf_rd),
@@ -414,6 +438,7 @@ module top_core(
     pipreg_ex2mem pipreg_ex2mem_inst (
     .clk(clk),
     .rst_n(rst_n),
+    .flush(1'b0),
 
     .d_ctrlu_mem_write(ex_ctrlu_mem_write),
     .d_ctrlu_load_type(ex_ctrlu_load_type),
@@ -483,6 +508,7 @@ module top_core(
     pipreg_mem2wb pipreg_mem2wb_inst (
     .clk(clk),
     .rst_n(rst_n),
+    .flush(1'b0),
 
     .d_ctrlu_reg_write(mem_ctrlu_reg_write),
     .d_ctrlu_res_src(mem_ctrlu_res_src),
@@ -522,6 +548,33 @@ module top_core(
     .csr_stl_mepc(id_csr_o_stl_mepc_raw)
     );
 
+    // ================================
+    // Hazard
+    // ================================
+    hzdu  hzdu_inst (
+    .clk(clk),
+    .rst_n(rst_n),
+    .ex_res_src(ex_ctrlu_res_src),
+    .mem_res_src(mem_ctrlu_res_src),
+    .id_alu_src1(id_ctrlu_alu1_src),
+    .id_rs1(id_regf_rs1),
+    .id_rs2(id_regf_rs2),
+    .ex_rs1(ex_regf_rs1),
+    .ex_rs2(ex_regf_rs2),
+    .ex_rd(ex_regf_rd),
+    .ex_reg_write(ex_ctrlu_reg_write),
+    .mem_rd(mem_core_rd),
+    .mem_reg_write(mem_ctrlu_reg_write),
+    .wb_rd(wb_regf_rd),
+    .wb_reg_write(wb_regf_rd_write),
+
+    .forward_rs1(hzd_fd_rs1),
+    .forward_rs2(hzd_fd_rs2),
+    .flush_id2ex(flush_id2ex),
+    .stall_if2id(stall_if2id),
+    .stall_if(stall_if)
+    );
+
     // ===============================
     // data_path
     // ===============================
@@ -539,13 +592,16 @@ module top_core(
         if (!rst_n) begin
             if_pc <= 32'b0;
         end else begin
-            case (if_pc_src)
-                `PC_MUX_NORM: if_pc <= if_pc_plus4;
-                `PC_MUX_PLUSIMM: if_pc <= ex_pc + ex_imm;
-                `PC_MUX_ALU: if_pc <= ex_exu_alu_res & ~32'b1;
-                `PC_MUX_TRAP: if_pc <= ex_exu_trap_targ_pc;
-                default: if_pc <= if_pc_plus4;
-            endcase
+            if (!stall_if) begin
+                case (if_pc_src)
+                    `PC_MUX_NORM: if_pc <= if_pc_plus4;
+                    `PC_MUX_PLUSIMM: if_pc <= ex_pc + ex_imm;
+                    `PC_MUX_ALU: if_pc <= ex_exu_alu_res & ~32'b1;
+                    `PC_MUX_TRAP: if_pc <= ex_exu_trap_targ_pc;
+                    default: if_pc <= if_pc_plus4;
+                endcase
+            end
+            
         end
     end
 
@@ -564,8 +620,16 @@ module top_core(
     assign id_csr_stl_mepc = id_csr_o_stl_mepc_raw;
 
     // EX stage
-    assign ex_alu_src0 = ex_ctrlu_alu0_src == `ALU_MUX_SRC0_RS1 ? ex_regf_rs1_data : ex_pc;
-    assign ex_alu_src1 = ex_ctrlu_alu1_src == `ALU_MUX_SRC1_RS2 ? ex_regf_rs2_data : ex_imm;
+    wire[31:0] ex_hzd_rs1_data = hzd_fd_rs1 == `EX_FROM_MEM ? mem_exu_alu_res :
+                                    hzd_fd_rs1 == `EX_FROM_WB ? wb_regf_rd_data :
+                                    hzd_fd_rs1 == `EX_FROM_EX ? ex_regf_rs1_data :
+                                    ex_regf_rs1_data;
+    wire[31:0] ex_hzd_rs2_data = hzd_fd_rs2 == `EX_FROM_MEM ? mem_exu_alu_res :
+                                    hzd_fd_rs2 == `EX_FROM_WB ? wb_regf_rd_data :
+                                    hzd_fd_rs2 == `EX_FROM_EX ? ex_regf_rs2_data :
+                                    ex_regf_rs2_data;
+    assign ex_alu_src0 = ex_ctrlu_alu0_src == `ALU_MUX_SRC0_RS1 ? ex_hzd_rs1_data : ex_pc;
+    assign ex_alu_src1 = ex_ctrlu_alu1_src == `ALU_MUX_SRC1_RS2 ? ex_hzd_rs2_data : ex_imm;
     assign ex_pc_plus4 = ex_pc + 4;
 
     assign ex_csr_rd_en = ex_exu_csr_rd_en;

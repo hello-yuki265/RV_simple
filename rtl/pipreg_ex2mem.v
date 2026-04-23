@@ -12,6 +12,7 @@
 module pipreg_ex2mem(
     input clk,
     input rst_n,
+    input flush,
 
     // --------------------
     // MEM stage controls
@@ -97,6 +98,10 @@ module pipreg_ex2mem(
             q_ctrlu_mem_write  <= 1'b0;
             q_ctrlu_load_type  <= 3'b0;
             q_ctrlu_store_type <= 3'b0;
+        end else if (flush) begin
+            q_ctrlu_mem_write  <= 1'b0;
+            q_ctrlu_load_type  <= 3'b0;
+            q_ctrlu_store_type <= 3'b0;
         end else begin
             q_ctrlu_mem_write  <= d_ctrlu_mem_write;
             q_ctrlu_load_type  <= d_ctrlu_load_type;
@@ -111,6 +116,9 @@ module pipreg_ex2mem(
         if (!rst_n) begin
             q_ctrlu_res_src   <= `WB_MUX_WIDTH'b0;
             q_ctrlu_reg_write <= 1'b0;
+        end else if (flush) begin
+            q_ctrlu_res_src   <= `WB_MUX_WIDTH'b0;
+            q_ctrlu_reg_write <= 1'b0;
         end else begin
             q_ctrlu_res_src   <= d_ctrlu_res_src;
             q_ctrlu_reg_write <= d_ctrlu_reg_write;
@@ -122,6 +130,10 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            q_exu_alu_res     <= 32'b0;
+            q_exu_branch_jump <= 1'b0;
+            q_regf_rs2_data   <= 32'b0;
+        end else if (flush) begin
             q_exu_alu_res     <= 32'b0;
             q_exu_branch_jump <= 1'b0;
             q_regf_rs2_data   <= 32'b0;
@@ -141,6 +153,11 @@ module pipreg_ex2mem(
             q_core_pc_plus4 <= 32'b0;
             q_core_imm      <= 32'b0;
             q_csr_rd_dat    <= `MXLEN'b0;
+        end else if (flush) begin
+            q_core_rd       <= 5'b0;
+            q_core_pc_plus4 <= 32'b0;
+            q_core_imm      <= 32'b0;
+            q_csr_rd_dat    <= `MXLEN'b0;
         end else begin
             q_core_rd       <= d_core_rd;
             q_core_pc_plus4 <= d_core_pc_plus4;
@@ -154,6 +171,20 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            q_exu_csr_wr_en        <= 1'b0;
+            q_exu_csr_rd_en        <= 1'b0;
+            q_exu_csr_idx          <= 12'b0;
+            q_exu_csr_wb_dat       <= `MXLEN'b0;
+
+            q_exu_trap_cause_en    <= 1'b0;
+            q_exu_trap_cause_val   <= `MXLEN'b0;
+            q_exu_trap_mepc_en     <= 1'b0;
+            q_exu_trap_mepc_val    <= `MXLEN'b0;
+            q_exu_trap_mstatus_en  <= 1'b0;
+            q_exu_trap_mret_en     <= 1'b0;
+            q_exu_trap_mscratch_en <= 1'b0;
+            q_exu_trap_targ_pc     <= `PC_WIDTH'b0;
+        end else if (flush) begin
             q_exu_csr_wr_en        <= 1'b0;
             q_exu_csr_rd_en        <= 1'b0;
             q_exu_csr_idx          <= 12'b0;

@@ -122,7 +122,7 @@ module tb_rv32i_check;
         int idx;
         begin
             rst_n = 1'b0;
-            dut.core_pc = 32'b0;
+            dut.if_pc = 32'b0;
             for (idx = 0; idx < 128; idx = idx + 1) begin
                 dut.inst_mem_inst.mem[idx] = NOP;
             end
@@ -209,7 +209,7 @@ module tb_rv32i_check;
     );
         logic [31:0] actual;
         begin
-            actual = dut.core_pc;
+            actual = dut.if_pc;
             if (actual !== expected) begin
                 $display("FAIL %-24s core_pc expected=0x%08h actual=0x%08h", label, expected, actual);
                 fail_count = fail_count + 1;

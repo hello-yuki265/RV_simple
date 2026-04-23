@@ -15,4 +15,5 @@
 ../rtl/pipreg_id2ex.v
 ../rtl/pipreg_ex2mem.v
 ../rtl/pipreg_mem2wb.v
+../rtl/hzdu.v
 ../rtl/top_core.v

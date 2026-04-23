@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-18 16:36:22
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-22 21:06:15
+ * @LastEditTime : 2026-04-23 13:33:58
  * @FilePath     : \RV_simple\rtl\glb_define.v
  * @Description  : 
  *************************************************************************/
@@ -108,6 +108,14 @@
 `define PC_MUX_PLUSIMM  (2'b01)
 `define PC_MUX_ALU  (2'b10)
 `define PC_MUX_TRAP (2'b11)
+
+// --------------------
+// Hazard: Forward
+// --------------------
+`define EX_FROM_EX      2'b00
+`define EX_FROM_MEM     2'b01
+`define EX_FROM_WB      2'b10
+      
 
 
 

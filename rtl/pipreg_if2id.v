@@ -13,6 +13,8 @@
 module pipreg_if2id(
     input clk,
     input rst_n,
+    input flush,
+    input stall,
 
     input [`PC_WIDTH-1:0] d_pc,
     input [31:0] d_instr,
@@ -31,7 +33,13 @@ module pipreg_if2id(
             q_rs1   <= 5'b0;
             q_rs2   <= 5'b0;
             q_rd    <= 5'b0;
-        end else begin
+        end else if (flush) begin
+            q_pc    <= `PC_WIDTH'b0;
+            q_instr <= 32'b0;
+            q_rs1   <= 5'b0;
+            q_rs2   <= 5'b0;
+            q_rd    <= 5'b0;
+        end else if (!stall)begin
             q_pc <= d_pc;
             q_instr <= d_instr;
             q_rs1 <= d_instr[19:15];
