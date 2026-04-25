@@ -50,10 +50,10 @@ module regfile(
     // 这里判断rs1==rd一起解决了访存的流水冲突
     // --------------------
     assign rs1_data = rs1 == 5'b0 ? 32'b0 : 
-                        (rs1 == rd) ? rd_data :
+                        (rd_write & rs1 == rd) ? rd_data :
                         register[rs1];
     assign rs2_data = rs2 == 5'b0 ? 32'b0 : 
-                        (rs2 == rd) ? rd_data : 
+                        (rd_write & rs2 == rd) ? rd_data : 
                         register[rs2];
 
     // ----------------------

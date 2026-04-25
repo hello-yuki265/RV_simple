@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-23 21:24:49
+ * @LastEditTime : 2026-04-25 17:22:21
  * @FilePath     : \RV_simple\rtl\top_core.v
  * @Description  :
  *************************************************************************/
@@ -25,6 +25,7 @@ module top_core(
     wire [31:0] if_instr;
     wire [31:0] if_pc_plus4;
     wire [1:0] if_pc_src;
+    wire if_pc_redirect;
 
     // ID
     wire [31:0] id_pc;
@@ -40,6 +41,8 @@ module top_core(
     wire [31:0] ex_pc_plus4;
     wire [31:0] ex_alu_src0;
     wire [31:0] ex_alu_src1;
+    wire [31:0] ex_hzd_rs1_data;
+    wire [31:0] ex_hzd_rs2_data;
 
     // MEM
     wire [31:0] mem_dmem_rd_data;
@@ -58,19 +61,7 @@ module top_core(
     // ctrl_unit ports
     // ================================
     // pipeline-participating (ID)
-    wire id_ctrlu_is_load;
-    wire id_ctrlu_is_imm;
-    wire id_ctrlu_is_store;
-    wire id_ctrlu_is_rtype;
-    wire id_ctrlu_is_btype;
-    wire id_ctrlu_is_jtype;
-    wire id_ctrlu_is_jalr;
-    wire id_ctrlu_is_lui;
-    wire id_ctrlu_is_auipc;
-    wire id_ctrlu_is_system;
-    wire id_ctrlu_is_trap;
-    wire id_ctrlu_is_ret;
-    wire id_ctrlu_is_csr;
+    wire [`INSTR_TYPE_WIDTH-1:0] id_ctrlu_instr_type_bus;
     wire [2:0] id_ctrlu_load_type;
     wire [2:0] id_ctrlu_store_type;
     wire [2:0] id_ctrlu_branch_type;
@@ -119,6 +110,7 @@ module top_core(
     wire ex_csr_rd_en;
     wire [11:0] ex_csr_rd_idx;
     wire [`MXLEN-1:0] ex_csr_rd_dat;
+    wire [`MXLEN-1:0] mem_fd_wb_data;
 
     // mixed-stage mux / csr outputs
     wire [11:0] exmem_csr_i_idx_mux;
@@ -130,19 +122,7 @@ module top_core(
     // ID/EX pipreg ports
     // ================================
     // pipeline-participating outputs (EX)
-    wire ex_ctrlu_is_load;
-    wire ex_ctrlu_is_imm;
-    wire ex_ctrlu_is_store;
-    wire ex_ctrlu_is_rtype;
-    wire ex_ctrlu_is_btype;
-    wire ex_ctrlu_is_jtype;
-    wire ex_ctrlu_is_jalr;
-    wire ex_ctrlu_is_lui;
-    wire ex_ctrlu_is_auipc;
-    wire ex_ctrlu_is_system;
-    wire ex_ctrlu_is_trap;
-    wire ex_ctrlu_is_ret;
-    wire ex_ctrlu_is_csr;
+    wire [`INSTR_TYPE_WIDTH-1:0] ex_ctrlu_instr_type_bus;
     wire [2:0] ex_ctrlu_load_type;
     wire [2:0] ex_ctrlu_store_type;
     wire [2:0] ex_ctrlu_branch_type;
@@ -195,6 +175,7 @@ module top_core(
     // EX/MEM pipreg ports
     // ================================
     // pipeline-participating outputs (MEM)
+    wire [`INSTR_TYPE_WIDTH-1:0] mem_ctrlu_instr_type_bus;
     wire mem_ctrlu_mem_write;
     wire [2:0] mem_ctrlu_load_type;
     wire [2:0] mem_ctrlu_store_type;
@@ -202,6 +183,7 @@ module top_core(
     wire mem_ctrlu_reg_write;
     wire [31:0] mem_exu_alu_res;
     wire mem_exu_branch_jump;
+    wire [4:0] mem_regf_rs2;
     wire [31:0] mem_regf_rs2_data;
     wire [4:0] mem_core_rd;
     wire [31:0] mem_core_pc_plus4;
@@ -234,6 +216,7 @@ module top_core(
     // MEM/WB pipreg ports
     // ================================
     // pipeline-participating outputs (WB)
+    wire [`INSTR_TYPE_WIDTH-1:0] wb_ctrlu_instr_type_bus;
     wire wb_ctrlu_reg_write;
     wire [`WB_MUX_WIDTH-1:0] wb_ctrlu_res_src;
     wire [31:0] wb_mem_rd_data;
@@ -248,9 +231,11 @@ module top_core(
     // ================================
     wire [1:0] hzd_fd_rs1;
     wire [1:0] hzd_fd_rs2;
-    wire flush_id2ex;
-    wire stall_if2id;
-    wire stall_if;
+    wire hzd_store_forward_rs2;
+    wire hzd_flush_if2id;
+    wire hzd_flush_id2ex;
+    wire hzd_stall_if2id;
+    wire hzd_stall_if;
 
     // ===============================
     // module instances
@@ -263,8 +248,8 @@ module top_core(
     pipreg_if2id pipreg_if2id_inst (
     .clk(clk),
     .rst_n(rst_n),
-    .flush(1'b0),
-    .stall(stall_if2id),
+    .flush(hzd_flush_if2id),
+    .stall(hzd_stall_if2id),
 
     .d_pc(if_pc),
     .d_instr(if_instr),
@@ -279,19 +264,7 @@ module top_core(
     .clk(clk),
     .rst_n(rst_n),
     .rv32_instr(id_instr),
-    .is_load(id_ctrlu_is_load),
-    .is_imm(id_ctrlu_is_imm),
-    .is_store(id_ctrlu_is_store),
-    .is_rtype(id_ctrlu_is_rtype),
-    .is_btype(id_ctrlu_is_btype),
-    .is_jtype(id_ctrlu_is_jtype),
-    .is_jalr(id_ctrlu_is_jalr),
-    .is_lui(id_ctrlu_is_lui),
-    .is_auipc(id_ctrlu_is_auipc),
-    .is_system(id_ctrlu_is_system),
-    .is_trap(id_ctrlu_is_trap),
-    .is_ret(id_ctrlu_is_ret),
-    .is_csr(id_ctrlu_is_csr),
+    .instr_type_bus(id_ctrlu_instr_type_bus),
     .load_type(id_ctrlu_load_type),
     .store_type(id_ctrlu_store_type),
     .branch_type(id_ctrlu_branch_type),
@@ -323,24 +296,12 @@ module top_core(
     pipreg_id2ex pipreg_id2ex_inst (
     .clk(clk),
     .rst_n(rst_n),
-    .flush(flush_id2ex),
+    .flush(hzd_flush_id2ex),
 
     .d_pc(id_pc),
     .q_pc(ex_pc),
 
-    .d_ctrlu_is_load(id_ctrlu_is_load),
-    .d_ctrlu_is_imm(id_ctrlu_is_imm),
-    .d_ctrlu_is_store(id_ctrlu_is_store),
-    .d_ctrlu_is_rtype(id_ctrlu_is_rtype),
-    .d_ctrlu_is_btype(id_ctrlu_is_btype),
-    .d_ctrlu_is_jtype(id_ctrlu_is_jtype),
-    .d_ctrlu_is_jalr(id_ctrlu_is_jalr),
-    .d_ctrlu_is_lui(id_ctrlu_is_lui),
-    .d_ctrlu_is_auipc(id_ctrlu_is_auipc),
-    .d_ctrlu_is_system(id_ctrlu_is_system),
-    .d_ctrlu_is_trap(id_ctrlu_is_trap),
-    .d_ctrlu_is_ret(id_ctrlu_is_ret),
-    .d_ctrlu_is_csr(id_ctrlu_is_csr),
+    .d_ctrlu_instr_type_bus(id_ctrlu_instr_type_bus),
     .d_ctrlu_load_type(id_ctrlu_load_type),
     .d_ctrlu_store_type(id_ctrlu_store_type),
     .d_ctrlu_branch_type(id_ctrlu_branch_type),
@@ -353,19 +314,7 @@ module top_core(
     .d_ctrlu_alu1_src(id_ctrlu_alu1_src),
     .d_ctrlu_reg_write(id_ctrlu_reg_write),
 
-    .q_ctrlu_is_load(ex_ctrlu_is_load),
-    .q_ctrlu_is_imm(ex_ctrlu_is_imm),
-    .q_ctrlu_is_store(ex_ctrlu_is_store),
-    .q_ctrlu_is_rtype(ex_ctrlu_is_rtype),
-    .q_ctrlu_is_btype(ex_ctrlu_is_btype),
-    .q_ctrlu_is_jtype(ex_ctrlu_is_jtype),
-    .q_ctrlu_is_jalr(ex_ctrlu_is_jalr),
-    .q_ctrlu_is_lui(ex_ctrlu_is_lui),
-    .q_ctrlu_is_auipc(ex_ctrlu_is_auipc),
-    .q_ctrlu_is_system(ex_ctrlu_is_system),
-    .q_ctrlu_is_trap(ex_ctrlu_is_trap),
-    .q_ctrlu_is_ret(ex_ctrlu_is_ret),
-    .q_ctrlu_is_csr(ex_ctrlu_is_csr),
+    .q_ctrlu_instr_type_bus(ex_ctrlu_instr_type_bus),
     .q_ctrlu_load_type(ex_ctrlu_load_type),
     .q_ctrlu_store_type(ex_ctrlu_store_type),
     .q_ctrlu_branch_type(ex_ctrlu_branch_type),
@@ -420,8 +369,8 @@ module top_core(
     .csr_idx(ex_exu_csr_idx),
     .csr_wb_dat(ex_exu_csr_wb_dat),
     .trap_pc(ex_pc),
-    .is_trap(ex_ctrlu_is_trap),
-    .is_ret(ex_ctrlu_is_ret),
+    .is_trap(ex_ctrlu_instr_type_bus[`INSTR_TYPE_TRAP]),
+    .is_ret(ex_ctrlu_instr_type_bus[`INSTR_TYPE_RET]),
     .trap_dec_bus(ex_ctrlu_trap_dec_bus),
     .trap_i_mtvec_val(ex_csr_stl_mtvec),
     .trap_i_mepc_val(ex_csr_stl_mepc),
@@ -440,9 +389,11 @@ module top_core(
     .rst_n(rst_n),
     .flush(1'b0),
 
+    .d_ctrlu_instr_type_bus(ex_ctrlu_instr_type_bus),
     .d_ctrlu_mem_write(ex_ctrlu_mem_write),
     .d_ctrlu_load_type(ex_ctrlu_load_type),
     .d_ctrlu_store_type(ex_ctrlu_store_type),
+    .q_ctrlu_instr_type_bus(mem_ctrlu_instr_type_bus),
     .q_ctrlu_mem_write(mem_ctrlu_mem_write),
     .q_ctrlu_load_type(mem_ctrlu_load_type),
     .q_ctrlu_store_type(mem_ctrlu_store_type),
@@ -454,9 +405,11 @@ module top_core(
 
     .d_exu_alu_res(ex_exu_alu_res),
     .d_exu_branch_jump(ex_exu_branch_jump),
-    .d_regf_rs2_data(ex_regf_rs2_data),
+    .d_regf_rs2(ex_regf_rs2),
+    .d_regf_rs2_data(ex_hzd_rs2_data),
     .q_exu_alu_res(mem_exu_alu_res),
     .q_exu_branch_jump(mem_exu_branch_jump),
+    .q_regf_rs2(mem_regf_rs2),
     .q_regf_rs2_data(mem_regf_rs2_data),
 
     .d_core_rd(ex_regf_rd),
@@ -510,10 +463,12 @@ module top_core(
     .rst_n(rst_n),
     .flush(1'b0),
 
+    .d_ctrlu_instr_type_bus(mem_ctrlu_instr_type_bus),
     .d_ctrlu_reg_write(mem_ctrlu_reg_write),
     .d_ctrlu_res_src(mem_ctrlu_res_src),
     .d_mem_rd_data(mem_dmem_rd_data),
     .d_exu_alu_res(mem_exu_alu_res),
+    .q_ctrlu_instr_type_bus(wb_ctrlu_instr_type_bus),
     .q_ctrlu_reg_write(wb_ctrlu_reg_write),
     .q_ctrlu_res_src(wb_ctrlu_res_src),
     .q_mem_rd_data(wb_mem_rd_data),
@@ -554,26 +509,40 @@ module top_core(
     hzdu  hzdu_inst (
     .clk(clk),
     .rst_n(rst_n),
-    .ex_res_src(ex_ctrlu_res_src),
-    .mem_res_src(mem_ctrlu_res_src),
+
+    .if_pc_redirect(if_pc_redirect),
+    
+    .id_is_store(id_ctrlu_instr_type_bus[`INSTR_TYPE_STORE]),
     .id_alu_src1(id_ctrlu_alu1_src),
     .id_rs1(id_regf_rs1),
     .id_rs2(id_regf_rs2),
+
+    .ex_is_branch(ex_ctrlu_instr_type_bus[`INSTR_TYPE_BTYPE]),
+    .ex_is_store(ex_ctrlu_instr_type_bus[`INSTR_TYPE_STORE]),
+    .ex_is_load(ex_ctrlu_instr_type_bus[`INSTR_TYPE_LOAD]),
     .ex_rs1(ex_regf_rs1),
     .ex_rs2(ex_regf_rs2),
     .ex_rd(ex_regf_rd),
     .ex_reg_write(ex_ctrlu_reg_write),
+    .ex_branch_jump(ex_exu_branch_jump),
+
+    .mem_is_store(mem_ctrlu_instr_type_bus[`INSTR_TYPE_STORE]),
+    .mem_is_load(mem_ctrlu_instr_type_bus[`INSTR_TYPE_LOAD]),
+    .mem_rs2(mem_regf_rs2),
     .mem_rd(mem_core_rd),
     .mem_reg_write(mem_ctrlu_reg_write),
+
     .wb_rd(wb_regf_rd),
-    .wb_reg_write(wb_regf_rd_write),
+    .wb_reg_write(wb_ctrlu_reg_write),
 
     .forward_rs1(hzd_fd_rs1),
     .forward_rs2(hzd_fd_rs2),
-    .flush_id2ex(flush_id2ex),
-    .stall_if2id(stall_if2id),
-    .stall_if(stall_if)
-    );
+    .store_forward_rs2(hzd_store_forward_rs2),
+    .flush_if2id(hzd_flush_if2id),
+    .flush_id2ex(hzd_flush_id2ex),
+    .stall_if2id(hzd_stall_if2id),
+    .stall_if(hzd_stall_if)
+  );
 
     // ===============================
     // data_path
@@ -583,16 +552,24 @@ module top_core(
     assign if_instr = if_imem_instr;
     assign if_pc_plus4 = if_pc + 4;
 
-    assign if_pc_src = ((ex_ctrlu_is_btype & ex_exu_branch_jump) | ex_ctrlu_is_jtype) ? `PC_MUX_PLUSIMM :
-                       ex_ctrlu_is_jalr ? `PC_MUX_ALU :
-                       (ex_ctrlu_is_trap | ex_ctrlu_is_ret) ? `PC_MUX_TRAP :
+    assign if_pc_redirect = (ex_ctrlu_instr_type_bus[`INSTR_TYPE_BTYPE] & ex_exu_branch_jump) |
+                            ex_ctrlu_instr_type_bus[`INSTR_TYPE_JTYPE] |
+                            ex_ctrlu_instr_type_bus[`INSTR_TYPE_JALR] |
+                            ex_ctrlu_instr_type_bus[`INSTR_TYPE_TRAP] |
+                            ex_ctrlu_instr_type_bus[`INSTR_TYPE_RET];
+    
+    assign if_pc_src = ((ex_ctrlu_instr_type_bus[`INSTR_TYPE_BTYPE] & ex_exu_branch_jump) |
+                        ex_ctrlu_instr_type_bus[`INSTR_TYPE_JTYPE]) ? `PC_MUX_PLUSIMM :
+                       ex_ctrlu_instr_type_bus[`INSTR_TYPE_JALR] ? `PC_MUX_ALU :
+                       (ex_ctrlu_instr_type_bus[`INSTR_TYPE_TRAP] |
+                        ex_ctrlu_instr_type_bus[`INSTR_TYPE_RET]) ? `PC_MUX_TRAP :
                        `PC_MUX_NORM;
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             if_pc <= 32'b0;
         end else begin
-            if (!stall_if) begin
+            if (!hzd_stall_if) begin
                 case (if_pc_src)
                     `PC_MUX_NORM: if_pc <= if_pc_plus4;
                     `PC_MUX_PLUSIMM: if_pc <= ex_pc + ex_imm;
@@ -620,11 +597,11 @@ module top_core(
     assign id_csr_stl_mepc = id_csr_o_stl_mepc_raw;
 
     // EX stage
-    wire[31:0] ex_hzd_rs1_data = hzd_fd_rs1 == `EX_FROM_MEM ? mem_exu_alu_res :
+    assign ex_hzd_rs1_data = hzd_fd_rs1 == `EX_FROM_MEM ? mem_fd_wb_data :
                                     hzd_fd_rs1 == `EX_FROM_WB ? wb_regf_rd_data :
                                     hzd_fd_rs1 == `EX_FROM_EX ? ex_regf_rs1_data :
                                     ex_regf_rs1_data;
-    wire[31:0] ex_hzd_rs2_data = hzd_fd_rs2 == `EX_FROM_MEM ? mem_exu_alu_res :
+    assign ex_hzd_rs2_data = hzd_fd_rs2 == `EX_FROM_MEM ? mem_fd_wb_data :
                                     hzd_fd_rs2 == `EX_FROM_WB ? wb_regf_rd_data :
                                     hzd_fd_rs2 == `EX_FROM_EX ? ex_regf_rs2_data :
                                     ex_regf_rs2_data;
@@ -639,7 +616,7 @@ module top_core(
     // MEM stage
     assign mem_dmem_addr = mem_exu_alu_res;
     assign mem_dmem_w_en = mem_ctrlu_mem_write;
-    assign mem_dmem_w_data = mem_regf_rs2_data;
+    assign mem_dmem_w_data = hzd_store_forward_rs2 ? wb_regf_rd_data : mem_regf_rs2_data;
     assign mem_dmem_load_type = mem_ctrlu_load_type;
     assign mem_dmem_store_type = mem_ctrlu_store_type;
 
@@ -654,6 +631,14 @@ module top_core(
     assign mem_csr_sgl_mscratch_en = mem_exu_trap_mscratch_en;
     assign mem_csr_sgl_mstatus_en = mem_exu_trap_mstatus_en;
     assign mem_csr_sgl_mret_en = mem_exu_trap_mret_en;
+
+    assign mem_fd_wb_data = // for forwarding to EX stage
+                            // 不考虑访存结果前推，这里单独做一个mux，避免增加EX阶段的组合逻辑延迟
+                            mem_ctrlu_res_src == `WB_MUX_ALU ? mem_exu_alu_res :
+                            mem_ctrlu_res_src == `WB_MUX_PCPLUS4 ? mem_core_pc_plus4 :
+                            mem_ctrlu_res_src == `WB_MUX_IMM ? mem_core_imm :
+                            mem_ctrlu_res_src == `WB_MUX_CSR ? mem_csr_rd_dat :
+                            mem_exu_alu_res;
 
     // WB stage
     assign wb_regf_rd = wb_core_rd;

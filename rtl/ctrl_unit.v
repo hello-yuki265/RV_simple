@@ -18,19 +18,7 @@ module ctrl_unit (
     // -----------------
     // 控制信号输出
     // -----------------
-    output is_load,
-    output is_imm,
-    output is_store,
-    output is_rtype,
-    output is_btype,
-    output is_jtype,
-    output is_jalr,
-    output is_lui,
-    output is_auipc,
-    output is_system,
-    output is_trap,
-    output is_ret,
-    output is_csr,
+    output [`INSTR_TYPE_WIDTH-1:0] instr_type_bus,
     output [2:0] load_type,
     output [2:0] store_type,
     output [2:0] branch_type,
@@ -103,16 +91,33 @@ module ctrl_unit (
     wire [4:0] rd       = rv32_instr[11:7];
     wire [6:0] op_code  = rv32_instr[6:0];
 
-    assign is_load      = op_code == OPC_LOAD;
-    assign is_imm       = op_code == OPC_OP_IMM;
-    assign is_store     = op_code == OPC_STORE;
-    assign is_rtype     = op_code == OPC_REG;
-    assign is_btype     = op_code == OPC_BRANCH;
-    assign is_jtype     = op_code == OPC_JAL;
-    assign is_jalr      = op_code == OPC_JALR;
-    assign is_lui       = op_code == OPC_LUI;
-    assign is_auipc     = op_code == OPC_AUIPC;
-    assign is_system    = op_code == OPC_SYSTEM;
+    wire is_load      = op_code == OPC_LOAD;
+    wire is_imm       = op_code == OPC_OP_IMM;
+    wire is_store     = op_code == OPC_STORE;
+    wire is_rtype     = op_code == OPC_REG;
+    wire is_btype     = op_code == OPC_BRANCH;
+    wire is_jtype     = op_code == OPC_JAL;
+    wire is_jalr      = op_code == OPC_JALR;
+    wire is_lui       = op_code == OPC_LUI;
+    wire is_auipc     = op_code == OPC_AUIPC;
+    wire is_system    = op_code == OPC_SYSTEM;
+    wire is_trap;
+    wire is_ret;
+    wire is_csr;
+
+    assign instr_type_bus[`INSTR_TYPE_LOAD]   = is_load;
+    assign instr_type_bus[`INSTR_TYPE_IMM]    = is_imm;
+    assign instr_type_bus[`INSTR_TYPE_STORE]  = is_store;
+    assign instr_type_bus[`INSTR_TYPE_RTYPE]  = is_rtype;
+    assign instr_type_bus[`INSTR_TYPE_BTYPE]  = is_btype;
+    assign instr_type_bus[`INSTR_TYPE_JTYPE]  = is_jtype;
+    assign instr_type_bus[`INSTR_TYPE_JALR]   = is_jalr;
+    assign instr_type_bus[`INSTR_TYPE_LUI]    = is_lui;
+    assign instr_type_bus[`INSTR_TYPE_AUIPC]  = is_auipc;
+    assign instr_type_bus[`INSTR_TYPE_SYSTEM] = is_system;
+    assign instr_type_bus[`INSTR_TYPE_TRAP]   = is_trap;
+    assign instr_type_bus[`INSTR_TYPE_RET]    = is_ret;
+    assign instr_type_bus[`INSTR_TYPE_CSR]    = is_csr;
 
     wire funct3_000 = (funct3 == 3'b000);
     wire funct3_001 = (funct3 == 3'b001);

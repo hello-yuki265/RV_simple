@@ -17,10 +17,12 @@ module pipreg_ex2mem(
     // --------------------
     // MEM stage controls
     // --------------------
+    input [`INSTR_TYPE_WIDTH-1:0] d_ctrlu_instr_type_bus,
     input d_ctrlu_mem_write,
     input [2:0] d_ctrlu_load_type,
     input [2:0] d_ctrlu_store_type,
 
+    output reg [`INSTR_TYPE_WIDTH-1:0] q_ctrlu_instr_type_bus,
     output reg q_ctrlu_mem_write,
     output reg [2:0] q_ctrlu_load_type,
     output reg [2:0] q_ctrlu_store_type,
@@ -39,10 +41,12 @@ module pipreg_ex2mem(
     // --------------------
     input [31:0] d_exu_alu_res,
     input d_exu_branch_jump,
+    input [4:0] d_regf_rs2,
     input [31:0] d_regf_rs2_data,
 
     output reg [31:0] q_exu_alu_res,
     output reg q_exu_branch_jump,
+    output reg [4:0] q_regf_rs2,
     output reg [31:0] q_regf_rs2_data,
 
     // --------------------
@@ -95,14 +99,17 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
+            q_ctrlu_instr_type_bus <= `INSTR_TYPE_WIDTH'b0;
             q_ctrlu_mem_write  <= 1'b0;
             q_ctrlu_load_type  <= 3'b0;
             q_ctrlu_store_type <= 3'b0;
         end else if (flush) begin
+            q_ctrlu_instr_type_bus <= `INSTR_TYPE_WIDTH'b0;
             q_ctrlu_mem_write  <= 1'b0;
             q_ctrlu_load_type  <= 3'b0;
             q_ctrlu_store_type <= 3'b0;
         end else begin
+            q_ctrlu_instr_type_bus <= d_ctrlu_instr_type_bus;
             q_ctrlu_mem_write  <= d_ctrlu_mem_write;
             q_ctrlu_load_type  <= d_ctrlu_load_type;
             q_ctrlu_store_type <= d_ctrlu_store_type;
@@ -132,14 +139,17 @@ module pipreg_ex2mem(
         if (!rst_n) begin
             q_exu_alu_res     <= 32'b0;
             q_exu_branch_jump <= 1'b0;
+            q_regf_rs2        <= 5'b0;
             q_regf_rs2_data   <= 32'b0;
         end else if (flush) begin
             q_exu_alu_res     <= 32'b0;
             q_exu_branch_jump <= 1'b0;
+            q_regf_rs2        <= 5'b0;
             q_regf_rs2_data   <= 32'b0;
         end else begin
             q_exu_alu_res     <= d_exu_alu_res;
             q_exu_branch_jump <= d_exu_branch_jump;
+            q_regf_rs2        <= d_regf_rs2;
             q_regf_rs2_data   <= d_regf_rs2_data;
         end
     end

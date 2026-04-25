@@ -4,7 +4,7 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-18 16:36:22
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-23 13:33:58
+ * @LastEditTime : 2026-04-24 13:25:07
  * @FilePath     : \RV_simple\rtl\glb_define.v
  * @Description  : 
  *************************************************************************/
@@ -19,6 +19,24 @@
 // ================================
 `define PC_WIDTH 32
 `define VLD_PC_NUM     1024
+
+// ======================
+// Instruction type def
+// ======================
+`define INSTR_TYPE_WIDTH  13
+`define INSTR_TYPE_LOAD   0
+`define INSTR_TYPE_IMM    1
+`define INSTR_TYPE_STORE  2
+`define INSTR_TYPE_RTYPE  3
+`define INSTR_TYPE_BTYPE  4
+`define INSTR_TYPE_JTYPE  5
+`define INSTR_TYPE_JALR   6
+`define INSTR_TYPE_LUI    7
+`define INSTR_TYPE_AUIPC  8
+`define INSTR_TYPE_SYSTEM 9
+`define INSTR_TYPE_TRAP   10
+`define INSTR_TYPE_RET    11
+`define INSTR_TYPE_CSR    12
 
 // ================================
 // ALU operation def
