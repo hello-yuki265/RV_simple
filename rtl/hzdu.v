@@ -31,6 +31,9 @@ module hzdu(
     input [4:0] ex_rd,
     input       ex_reg_write,
     input       ex_branch_jump,
+    input       ex_csr_wr_en,
+    input       ex_csr_rd_en,
+    input [11:0] ex_csr_idx,
 
     // MEM stage signals
     input mem_is_store,
@@ -38,6 +41,9 @@ module hzdu(
     input [4:0] mem_rs2,
     input [4:0] mem_rd,
     input       mem_reg_write,
+    input       mem_csr_wr_en,
+    input       mem_csr_rd_en,
+    input [11:0] mem_csr_idx,
 
     // WB stage signals
     input [4:0] wb_rd,
@@ -47,6 +53,7 @@ module hzdu(
     output [1:0] forward_rs1,
     output [1:0] forward_rs2,
     output       store_forward_rs2,
+    output       csr_forward,
 
     // control signals for stall and flush
     output flush_if2id,
@@ -61,7 +68,7 @@ module hzdu(
     assign forward_rs2 = (!mem_is_load & mem_reg_write & (mem_rd == ex_rs2) & (ex_rs2 != 0)) ? `EX_FROM_MEM : 
                             (wb_reg_write & (wb_rd == ex_rs2) & (ex_rs2 != 0)) ? `EX_FROM_WB : 
                             `EX_FROM_EX;
-
+    assign csr_forward = mem_csr_wr_en & ex_csr_rd_en & (mem_csr_idx == ex_csr_idx);
     // load -> store
     assign store_forward_rs2 = mem_is_store & wb_reg_write & (wb_rd == mem_rs2) & (mem_rs2 != 0);
 

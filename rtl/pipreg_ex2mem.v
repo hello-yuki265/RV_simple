@@ -17,81 +17,81 @@ module pipreg_ex2mem(
     // --------------------
     // MEM stage controls
     // --------------------
-    input [`INSTR_TYPE_WIDTH-1:0] d_ctrlu_instr_type_bus,
-    input d_ctrlu_mem_write,
-    input [2:0] d_ctrlu_load_type,
-    input [2:0] d_ctrlu_store_type,
+    input [`INSTR_TYPE_WIDTH-1:0] d_instr_type_bus,
+    input d_mem_write,
+    input [2:0] d_load_type,
+    input [2:0] d_store_type,
 
-    output reg [`INSTR_TYPE_WIDTH-1:0] q_ctrlu_instr_type_bus,
-    output reg q_ctrlu_mem_write,
-    output reg [2:0] q_ctrlu_load_type,
-    output reg [2:0] q_ctrlu_store_type,
+    output reg [`INSTR_TYPE_WIDTH-1:0] q_instr_type_bus,
+    output reg q_mem_write,
+    output reg [2:0] q_load_type,
+    output reg [2:0] q_store_type,
 
     // --------------------
     // WB stage controls
     // --------------------
-    input [`WB_MUX_WIDTH-1:0] d_ctrlu_res_src,
-    input d_ctrlu_reg_write,
+    input [`WB_MUX_WIDTH-1:0] d_res_src,
+    input d_reg_write,
 
-    output reg [`WB_MUX_WIDTH-1:0] q_ctrlu_res_src,
-    output reg q_ctrlu_reg_write,
+    output reg [`WB_MUX_WIDTH-1:0] q_res_src,
+    output reg q_reg_write,
 
     // --------------------
     // EX/MEM datapath
     // --------------------
-    input [31:0] d_exu_alu_res,
-    input d_exu_branch_jump,
-    input [4:0] d_regf_rs2,
-    input [31:0] d_regf_rs2_data,
+    input [31:0] d_alu_res,
+    input d_branch_jump,
+    input [4:0] d_rs2,
+    input [31:0] d_rs2_data,
 
-    output reg [31:0] q_exu_alu_res,
-    output reg q_exu_branch_jump,
-    output reg [4:0] q_regf_rs2,
-    output reg [31:0] q_regf_rs2_data,
+    output reg [31:0] q_alu_res,
+    output reg q_branch_jump,
+    output reg [4:0] q_rs2,
+    output reg [31:0] q_rs2_data,
 
     // --------------------
     // WB payload
     // --------------------
-    input [4:0] d_core_rd,
-    input [31:0] d_core_pc_plus4,
-    input [31:0] d_core_imm,
+    input [4:0] d_rd,
+    input [31:0] d_pc_plus4,
+    input [31:0] d_imm,
     input [`MXLEN-1:0] d_csr_rd_dat,
 
-    output reg [4:0] q_core_rd,
-    output reg [31:0] q_core_pc_plus4,
-    output reg [31:0] q_core_imm,
+    output reg [4:0] q_rd,
+    output reg [31:0] q_pc_plus4,
+    output reg [31:0] q_imm,
     output reg [`MXLEN-1:0] q_csr_rd_dat,
 
     // --------------------
     // CSR/Trap payload
     // --------------------
-    input d_exu_csr_wr_en,
-    input d_exu_csr_rd_en,
-    input [11:0] d_exu_csr_idx,
-    input [`MXLEN-1:0] d_exu_csr_wb_dat,
+    input d_csr_wr_en,
+    input d_csr_rd_en,
+    input [11:0] d_csr_idx,
+    input [`MXLEN-1:0] d_csr_wb_dat,
 
-    input d_exu_trap_cause_en,
-    input [`MXLEN-1:0] d_exu_trap_cause_val,
-    input d_exu_trap_mepc_en,
-    input [`MXLEN-1:0] d_exu_trap_mepc_val,
-    input d_exu_trap_mstatus_en,
-    input d_exu_trap_mret_en,
-    input d_exu_trap_mscratch_en,
-    input [`PC_WIDTH-1:0] d_exu_trap_targ_pc,
+    input d_trap_cause_en,
+    input [`MXLEN-1:0] d_trap_cause_val,
+    input d_trap_mepc_en,
+    input [`MXLEN-1:0] d_trap_mepc_val,
+    input d_trap_mstatus_en,
+    input d_trap_mret_en,
+    input d_trap_mscratch_en,
+    input [`PC_WIDTH-1:0] d_trap_targ_pc,
 
-    output reg q_exu_csr_wr_en,
-    output reg q_exu_csr_rd_en,
-    output reg [11:0] q_exu_csr_idx,
-    output reg [`MXLEN-1:0] q_exu_csr_wb_dat,
+    output reg q_csr_wr_en,
+    output reg q_csr_rd_en,
+    output reg [11:0] q_csr_idx,
+    output reg [`MXLEN-1:0] q_csr_wb_dat,
 
-    output reg q_exu_trap_cause_en,
-    output reg [`MXLEN-1:0] q_exu_trap_cause_val,
-    output reg q_exu_trap_mepc_en,
-    output reg [`MXLEN-1:0] q_exu_trap_mepc_val,
-    output reg q_exu_trap_mstatus_en,
-    output reg q_exu_trap_mret_en,
-    output reg q_exu_trap_mscratch_en,
-    output reg [`PC_WIDTH-1:0] q_exu_trap_targ_pc
+    output reg q_trap_cause_en,
+    output reg [`MXLEN-1:0] q_trap_cause_val,
+    output reg q_trap_mepc_en,
+    output reg [`MXLEN-1:0] q_trap_mepc_val,
+    output reg q_trap_mstatus_en,
+    output reg q_trap_mret_en,
+    output reg q_trap_mscratch_en,
+    output reg [`PC_WIDTH-1:0] q_trap_targ_pc
 );
 
     // --------------------
@@ -99,20 +99,20 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            q_ctrlu_instr_type_bus <= `INSTR_TYPE_WIDTH'b0;
-            q_ctrlu_mem_write  <= 1'b0;
-            q_ctrlu_load_type  <= 3'b0;
-            q_ctrlu_store_type <= 3'b0;
+            q_instr_type_bus <= `INSTR_TYPE_WIDTH'b0;
+            q_mem_write      <= 1'b0;
+            q_load_type      <= 3'b0;
+            q_store_type     <= 3'b0;
         end else if (flush) begin
-            q_ctrlu_instr_type_bus <= `INSTR_TYPE_WIDTH'b0;
-            q_ctrlu_mem_write  <= 1'b0;
-            q_ctrlu_load_type  <= 3'b0;
-            q_ctrlu_store_type <= 3'b0;
+            q_instr_type_bus <= `INSTR_TYPE_WIDTH'b0;
+            q_mem_write      <= 1'b0;
+            q_load_type      <= 3'b0;
+            q_store_type     <= 3'b0;
         end else begin
-            q_ctrlu_instr_type_bus <= d_ctrlu_instr_type_bus;
-            q_ctrlu_mem_write  <= d_ctrlu_mem_write;
-            q_ctrlu_load_type  <= d_ctrlu_load_type;
-            q_ctrlu_store_type <= d_ctrlu_store_type;
+            q_instr_type_bus <= d_instr_type_bus;
+            q_mem_write      <= d_mem_write;
+            q_load_type      <= d_load_type;
+            q_store_type     <= d_store_type;
         end
     end
 
@@ -121,14 +121,14 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            q_ctrlu_res_src   <= `WB_MUX_WIDTH'b0;
-            q_ctrlu_reg_write <= 1'b0;
+            q_res_src   <= `WB_MUX_WIDTH'b0;
+            q_reg_write <= 1'b0;
         end else if (flush) begin
-            q_ctrlu_res_src   <= `WB_MUX_WIDTH'b0;
-            q_ctrlu_reg_write <= 1'b0;
+            q_res_src   <= `WB_MUX_WIDTH'b0;
+            q_reg_write <= 1'b0;
         end else begin
-            q_ctrlu_res_src   <= d_ctrlu_res_src;
-            q_ctrlu_reg_write <= d_ctrlu_reg_write;
+            q_res_src   <= d_res_src;
+            q_reg_write <= d_reg_write;
         end
     end
 
@@ -137,20 +137,20 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            q_exu_alu_res     <= 32'b0;
-            q_exu_branch_jump <= 1'b0;
-            q_regf_rs2        <= 5'b0;
-            q_regf_rs2_data   <= 32'b0;
+            q_alu_res     <= 32'b0;
+            q_branch_jump <= 1'b0;
+            q_rs2         <= 5'b0;
+            q_rs2_data    <= 32'b0;
         end else if (flush) begin
-            q_exu_alu_res     <= 32'b0;
-            q_exu_branch_jump <= 1'b0;
-            q_regf_rs2        <= 5'b0;
-            q_regf_rs2_data   <= 32'b0;
+            q_alu_res     <= 32'b0;
+            q_branch_jump <= 1'b0;
+            q_rs2         <= 5'b0;
+            q_rs2_data    <= 32'b0;
         end else begin
-            q_exu_alu_res     <= d_exu_alu_res;
-            q_exu_branch_jump <= d_exu_branch_jump;
-            q_regf_rs2        <= d_regf_rs2;
-            q_regf_rs2_data   <= d_regf_rs2_data;
+            q_alu_res     <= d_alu_res;
+            q_branch_jump <= d_branch_jump;
+            q_rs2         <= d_rs2;
+            q_rs2_data    <= d_rs2_data;
         end
     end
 
@@ -159,19 +159,19 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            q_core_rd       <= 5'b0;
-            q_core_pc_plus4 <= 32'b0;
-            q_core_imm      <= 32'b0;
+            q_rd          <= 5'b0;
+            q_pc_plus4    <= 32'b0;
+            q_imm         <= 32'b0;
             q_csr_rd_dat    <= `MXLEN'b0;
         end else if (flush) begin
-            q_core_rd       <= 5'b0;
-            q_core_pc_plus4 <= 32'b0;
-            q_core_imm      <= 32'b0;
+            q_rd          <= 5'b0;
+            q_pc_plus4    <= 32'b0;
+            q_imm         <= 32'b0;
             q_csr_rd_dat    <= `MXLEN'b0;
         end else begin
-            q_core_rd       <= d_core_rd;
-            q_core_pc_plus4 <= d_core_pc_plus4;
-            q_core_imm      <= d_core_imm;
+            q_rd          <= d_rd;
+            q_pc_plus4    <= d_pc_plus4;
+            q_imm         <= d_imm;
             q_csr_rd_dat    <= d_csr_rd_dat;
         end
     end
@@ -181,47 +181,47 @@ module pipreg_ex2mem(
     // --------------------
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            q_exu_csr_wr_en        <= 1'b0;
-            q_exu_csr_rd_en        <= 1'b0;
-            q_exu_csr_idx          <= 12'b0;
-            q_exu_csr_wb_dat       <= `MXLEN'b0;
+            q_csr_wr_en        <= 1'b0;
+            q_csr_rd_en        <= 1'b0;
+            q_csr_idx          <= 12'b0;
+            q_csr_wb_dat       <= `MXLEN'b0;
 
-            q_exu_trap_cause_en    <= 1'b0;
-            q_exu_trap_cause_val   <= `MXLEN'b0;
-            q_exu_trap_mepc_en     <= 1'b0;
-            q_exu_trap_mepc_val    <= `MXLEN'b0;
-            q_exu_trap_mstatus_en  <= 1'b0;
-            q_exu_trap_mret_en     <= 1'b0;
-            q_exu_trap_mscratch_en <= 1'b0;
-            q_exu_trap_targ_pc     <= `PC_WIDTH'b0;
+            q_trap_cause_en    <= 1'b0;
+            q_trap_cause_val   <= `MXLEN'b0;
+            q_trap_mepc_en     <= 1'b0;
+            q_trap_mepc_val    <= `MXLEN'b0;
+            q_trap_mstatus_en  <= 1'b0;
+            q_trap_mret_en     <= 1'b0;
+            q_trap_mscratch_en <= 1'b0;
+            q_trap_targ_pc     <= `PC_WIDTH'b0;
         end else if (flush) begin
-            q_exu_csr_wr_en        <= 1'b0;
-            q_exu_csr_rd_en        <= 1'b0;
-            q_exu_csr_idx          <= 12'b0;
-            q_exu_csr_wb_dat       <= `MXLEN'b0;
+            q_csr_wr_en        <= 1'b0;
+            q_csr_rd_en        <= 1'b0;
+            q_csr_idx          <= 12'b0;
+            q_csr_wb_dat       <= `MXLEN'b0;
 
-            q_exu_trap_cause_en    <= 1'b0;
-            q_exu_trap_cause_val   <= `MXLEN'b0;
-            q_exu_trap_mepc_en     <= 1'b0;
-            q_exu_trap_mepc_val    <= `MXLEN'b0;
-            q_exu_trap_mstatus_en  <= 1'b0;
-            q_exu_trap_mret_en     <= 1'b0;
-            q_exu_trap_mscratch_en <= 1'b0;
-            q_exu_trap_targ_pc     <= `PC_WIDTH'b0;
+            q_trap_cause_en    <= 1'b0;
+            q_trap_cause_val   <= `MXLEN'b0;
+            q_trap_mepc_en     <= 1'b0;
+            q_trap_mepc_val    <= `MXLEN'b0;
+            q_trap_mstatus_en  <= 1'b0;
+            q_trap_mret_en     <= 1'b0;
+            q_trap_mscratch_en <= 1'b0;
+            q_trap_targ_pc     <= `PC_WIDTH'b0;
         end else begin
-            q_exu_csr_wr_en        <= d_exu_csr_wr_en;
-            q_exu_csr_rd_en        <= d_exu_csr_rd_en;
-            q_exu_csr_idx          <= d_exu_csr_idx;
-            q_exu_csr_wb_dat       <= d_exu_csr_wb_dat;
+            q_csr_wr_en        <= d_csr_wr_en;
+            q_csr_rd_en        <= d_csr_rd_en;
+            q_csr_idx          <= d_csr_idx;
+            q_csr_wb_dat       <= d_csr_wb_dat;
 
-            q_exu_trap_cause_en    <= d_exu_trap_cause_en;
-            q_exu_trap_cause_val   <= d_exu_trap_cause_val;
-            q_exu_trap_mepc_en     <= d_exu_trap_mepc_en;
-            q_exu_trap_mepc_val    <= d_exu_trap_mepc_val;
-            q_exu_trap_mstatus_en  <= d_exu_trap_mstatus_en;
-            q_exu_trap_mret_en     <= d_exu_trap_mret_en;
-            q_exu_trap_mscratch_en <= d_exu_trap_mscratch_en;
-            q_exu_trap_targ_pc     <= d_exu_trap_targ_pc;
+            q_trap_cause_en    <= d_trap_cause_en;
+            q_trap_cause_val   <= d_trap_cause_val;
+            q_trap_mepc_en     <= d_trap_mepc_en;
+            q_trap_mepc_val    <= d_trap_mepc_val;
+            q_trap_mstatus_en  <= d_trap_mstatus_en;
+            q_trap_mret_en     <= d_trap_mret_en;
+            q_trap_mscratch_en <= d_trap_mscratch_en;
+            q_trap_targ_pc     <= d_trap_targ_pc;
         end
     end
 
