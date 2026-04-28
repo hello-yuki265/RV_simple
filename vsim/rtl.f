@@ -2,18 +2,18 @@
 # base comp
 ../rtl/base_comp/*.v
 
-../rtl/alu.v
-../rtl/ctrl_unit.v
-../rtl/data_mem.v
-../rtl/inst_mem.v
-../rtl/regfile.v
-../rtl/csr_ctrl.v
-../rtl/csr.v
-../rtl/except.v
-../rtl/exu.v
-../rtl/pipreg_if2id.v
-../rtl/pipreg_id2ex.v
-../rtl/pipreg_ex2mem.v
-../rtl/pipreg_mem2wb.v
-../rtl/hzdu.v
-../rtl/top_core.v
+../rtl/core/alu.v
+../rtl/core/ctrl_unit.v
+../rtl/core/data_mem.v
+../rtl/core/inst_mem.v
+../rtl/core/regfile.v
+../rtl/core/csr_ctrl.v
+../rtl/core/csr.v
+../rtl/core/except.v
+../rtl/core/exu.v
+../rtl/core/pipreg_if2id.v
+../rtl/core/pipreg_id2ex.v
+../rtl/core/pipreg_ex2mem.v
+../rtl/core/pipreg_mem2wb.v
+../rtl/core/hzdu.v
+../rtl/core/simple_core.v

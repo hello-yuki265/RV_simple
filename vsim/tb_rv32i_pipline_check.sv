@@ -5,7 +5,7 @@ module tb_rv32i_pipline_check;
     int fail_count;
     int pass_count;
 
-    top_core dut (
+    simple_core dut (
         .clk(clk),
         .rst_n(rst_n)
     );

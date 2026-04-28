@@ -4,12 +4,12 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-25 18:50:05
- * @FilePath     : \RV_simple\rtl\top_core.v
+ * @LastEditTime : 2026-04-28 11:23:35
+ * @FilePath     : \RV_simple\rtl\core\simple_core.v
  * @Description  :
  *************************************************************************/
 `include "glb_define.v"
-module top_core(
+module simple_core(
     clk,
     rst_n
 );
