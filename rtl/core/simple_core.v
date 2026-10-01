@@ -1,21 +1,28 @@
 /*************************************************************************
- * @Copyright (c) 2026 by hello-yuki265, All Rights Reserved.
+ * @Copyright (c) 2026 by hello-yuki265, All Rights Reserved. 
  * @Author       : hello-yuki265
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-17 15:05:46
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-28 11:23:35
+ * @LastEditTime : 2026-04-28 14:29:30
  * @FilePath     : \RV_simple\rtl\core\simple_core.v
- * @Description  :
+ * @Description  : 
  *************************************************************************/
 `include "glb_define.v"
 module simple_core(
     clk,
-    rst_n
+    rst_n,
+    pc,
+    instr,
+
+    interrupt
 );
 
     input clk;
     input rst_n;
+    output [31:0] pc;
+    input [31:0] instr;
+    input [`INT_TYPE_NUM-1:0] interrupt;
 
     // ================================
     // stage op signals
@@ -113,6 +120,7 @@ module simple_core(
     wire [`MXLEN-1:0] ex_hzd_csr_rd_dat;
     wire [`MXLEN-1:0] ex_hzd_csr_stl_mtvec;
     wire [`MXLEN-1:0] ex_hzd_csr_stl_mepc;
+    wire [`MXLEN-1:0] ex_hzd_csr_stl_mstatus;
     wire [`MXLEN-1:0] mem_fd_wb_data;
 
     // mixed-stage mux / csr outputs
@@ -120,6 +128,7 @@ module simple_core(
     wire [`MXLEN-1:0] ex_csr_o_rd_dat;
     wire [`MXLEN-1:0] id_csr_o_stl_mtvec_raw;
     wire [`MXLEN-1:0] id_csr_o_stl_mepc_raw;
+    wire [`MXLEN-1:0] id_csr_o_stl_mstatus_raw;
 
     // ================================
     // ID/EX pipreg ports
@@ -144,6 +153,7 @@ module simple_core(
     wire [4:0] ex_regf_rd;
     wire [`MXLEN-1:0] ex_csr_stl_mtvec;
     wire [`MXLEN-1:0] ex_csr_stl_mepc;
+    wire [`MXLEN-1:0] ex_csr_stl_mstatus;
 
     // non-pipeline/unused bundle (to match module ports)
     wire [31:0] id_regf_rd_data_unused;
@@ -151,6 +161,7 @@ module simple_core(
     wire [`MXLEN-1:0] id_csr_rd_dat_pipe_unused;
     wire [`MXLEN-1:0] id_csr_stl_mtvec;
     wire [`MXLEN-1:0] id_csr_stl_mepc;
+    wire [`MXLEN-1:0] id_csr_stl_mstatus;
     wire [31:0] ex_regf_rd_data_unused;
     wire ex_regf_rd_write_unused;
     wire [`MXLEN-1:0] ex_csr_rd_dat_pipe_unused;
@@ -244,10 +255,10 @@ module simple_core(
     // ===============================
     // module instances
     // ===============================
-    inst_mem inst_mem_inst (
-    .pc(if_imem_pc),
-    .instr(if_imem_instr)
-    );
+    // inst_mem inst_mem_inst (
+    // .pc(if_imem_pc),
+    // .instr(if_imem_instr)
+    // );
 
     pipreg_if2id pipreg_if2id_inst (
     .clk(clk),
@@ -352,9 +363,11 @@ module simple_core(
     .d_csr_rd_dat(id_csr_rd_dat_pipe_unused),
     .d_csr_stl_mtvec(id_csr_stl_mtvec),
     .d_csr_stl_mepc(id_csr_stl_mepc),
+    .d_csr_stl_mstatus(id_csr_stl_mstatus),
     .q_csr_rd_dat(ex_csr_rd_dat_pipe_unused),
     .q_csr_stl_mtvec(ex_csr_stl_mtvec),
-    .q_csr_stl_mepc(ex_csr_stl_mepc)
+    .q_csr_stl_mepc(ex_csr_stl_mepc),
+    .q_csr_stl_mstatus(ex_csr_stl_mstatus)
     );
 
     exu exu_inst (
@@ -373,6 +386,7 @@ module simple_core(
     .csr_idx(ex_exu_csr_idx),
     .csr_wb_dat(ex_exu_csr_wb_dat),
     .trap_pc(ex_pc),
+    .trap_interrupt(interrupt),
     .is_trap(ex_ctrlu_instr_type_bus[`INSTR_TYPE_TRAP]),
     .is_ret(ex_ctrlu_instr_type_bus[`INSTR_TYPE_RET]),
     .trap_dec_bus(ex_ctrlu_trap_dec_bus),
@@ -505,7 +519,8 @@ module simple_core(
     .sgl_mstatus_en(mem_csr_sgl_mstatus_en),
     .sgl_mret_en(mem_csr_sgl_mret_en),
     .csr_stl_mtvec(id_csr_o_stl_mtvec_raw),
-    .csr_stl_mepc(id_csr_o_stl_mepc_raw)
+    .csr_stl_mepc(id_csr_o_stl_mepc_raw),
+    .csr_stl_mstatus(id_csr_o_stl_mstatus_raw)
     );
 
     // ================================
@@ -561,7 +576,8 @@ module simple_core(
     // ===============================
     // IF stage
     assign if_imem_pc = if_pc;
-    assign if_instr = if_imem_instr;
+    assign pc = if_pc;
+    assign if_instr = instr;//if_imem_instr;
     assign if_pc_plus4 = if_pc + 4;
 
     assign if_pc_redirect = (ex_ctrlu_instr_type_bus[`INSTR_TYPE_BTYPE] & ex_exu_branch_jump) |
@@ -607,7 +623,7 @@ module simple_core(
 
     assign id_csr_stl_mtvec = id_csr_o_stl_mtvec_raw;
     assign id_csr_stl_mepc = id_csr_o_stl_mepc_raw;
-
+    assign id_csr_stl_mstatus = id_csr_o_stl_mstatus_raw;
     // EX stage
     assign ex_hzd_rs1_data = hzd_fd_rs1 == `EX_FROM_MEM ? mem_fd_wb_data :
                                     hzd_fd_rs1 == `EX_FROM_WB ? wb_regf_rd_data :
@@ -630,6 +646,8 @@ module simple_core(
                                   ex_csr_stl_mtvec;
     assign ex_hzd_csr_stl_mepc = (mem_csr_wr_en & (mem_csr_wr_idx == 12'h341)) ? mem_csr_wb_dat :
                                  ex_csr_stl_mepc;
+    assign ex_hzd_csr_stl_mstatus = (mem_csr_wr_en & (mem_csr_wr_idx == 12'h300)) ? mem_csr_wb_dat :
+                                    ex_csr_stl_mstatus;
 
     // MEM stage
     assign mem_dmem_addr = mem_exu_alu_res;

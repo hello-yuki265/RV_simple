@@ -4,8 +4,8 @@
  * @Github       : 2658476808@qq.com
  * @Date         : 2026-04-21 15:13:57
  * @LastEditors  : hello-yuki265 2658476808@qq.com
- * @LastEditTime : 2026-04-22 12:26:05
- * @FilePath     : \RV_simple\rtl\except.v
+ * @LastEditTime : 2026-09-29 19:38:13
+ * @FilePath     : \RV_simple\rtl\core\except.v
  * @Description  : 
  *************************************************************************/
 `include "glb_define.v"
@@ -16,11 +16,13 @@
     input [`PC_WIDTH-1:0]trap_pc,
     input is_trap,
     input is_ret,
-    input [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus,
+    input [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus, 
+    input [`INT_TYPE_NUM-1:0] trap_interrupt,
     
     input [`MXLEN-1:0] trap_i_mtvec_val, 
     input [`MXLEN-1:0] trap_i_mepc_val,
-    
+    input [`MXLEN-1:0] trap_i_mstatus_val,
+
     output trap_cause_en,
     output [`MXLEN-1:0] trap_cause_val,
     output trap_mepc_en,
@@ -38,20 +40,26 @@
     wire sret = trap_dec_bus[`TRAP_DEC_SRET];
     wire mret = trap_dec_bus[`TRAP_DEC_MRET];
 
+    // set interrupt
+    // 外部中断触发，且mie为1时，才触发中断
+    wire external_interrupt = trap_i_mstatus_val[3] & (|trap_interrupt);
     
     // set cause val
-    assign trap_cause_en = ecall | ebreak;
-    assign trap_cause_val = ecall ? 32'd3 :
-                            ebreak ? 32'd11 :
-                            32'd0; // 目前只考虑软件异常，不考虑中断
+    wire interrupt = ecall | ebreak | external_interrupt;
+    assign trap_cause_en = ecall | ebreak | external_interrupt;
+    wire [30:0] trap_cause_exception = ecall ? 31'd3 :
+                                    ebreak ? 31'd11 :
+                                    external_interrupt ? 31'd11 : 
+                                    31'd0; 
+    assign trap_cause_val = {}
 
     // set epc to current trap pc
-    assign trap_mepc_en = ecall | ebreak;
+    assign trap_mepc_en = ecall | ebreak | external_interrupt;
     assign trap_mepc_val = trap_pc;
 
     
-    assign trap_mscratch_en = ecall | ebreak;
-    assign trap_mstatus_en = ecall | ebreak;
+    assign trap_mscratch_en = ecall | ebreak | external_interrupt;
+    assign trap_mstatus_en = ecall | ebreak | external_interrupt;
     assign trap_mret_en = mret;
 
     wire [`PC_WIDTH-1:0] handler_base = {trap_i_mtvec_val[31:2], 2'b0};

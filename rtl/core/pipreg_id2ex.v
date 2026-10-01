@@ -79,10 +79,12 @@
     input [`MXLEN-1:0]  d_csr_rd_dat,
     input [`MXLEN-1:0]  d_csr_stl_mtvec,
     input [`MXLEN-1:0]  d_csr_stl_mepc,
+    input [`MXLEN-1:0]  d_csr_stl_mstatus,
 
     output reg [`MXLEN-1:0]  q_csr_rd_dat,
     output reg [`MXLEN-1:0]  q_csr_stl_mtvec,
-    output reg [`MXLEN-1:0]  q_csr_stl_mepc
+    output reg [`MXLEN-1:0]  q_csr_stl_mepc,
+    output reg [`MXLEN-1:0]  q_csr_stl_mstatus
 );
 
     always @(posedge clk or negedge rst_n) begin
@@ -183,14 +185,17 @@
             q_csr_rd_dat    <= `MXLEN'b0;
             q_csr_stl_mtvec <= `MXLEN'b0;
             q_csr_stl_mepc  <= `MXLEN'b0;
+            q_csr_stl_mstatus <= `MXLEN'b0;
         end else if (flush) begin
             q_csr_rd_dat    <= `MXLEN'b0;
             q_csr_stl_mtvec <= `MXLEN'b0;
             q_csr_stl_mepc  <= `MXLEN'b0;
+            q_csr_stl_mstatus <= `MXLEN'b0;
         end else begin
             q_csr_rd_dat    <= d_csr_rd_dat;
             q_csr_stl_mtvec <= d_csr_stl_mtvec;
             q_csr_stl_mepc  <= d_csr_stl_mepc;
+            q_csr_stl_mstatus <= d_csr_stl_mstatus;
         end
     end
 endmodule

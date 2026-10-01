@@ -24,7 +24,8 @@ module csr(
 
     // 固定输出CSR
     csr_stl_mtvec,
-    csr_stl_mepc
+    csr_stl_mepc,
+    csr_stl_mstatus
 
 );
 
@@ -49,6 +50,7 @@ module csr(
 
     output [`MXLEN-1:0] csr_stl_mtvec;
     output [`MXLEN-1:0] csr_stl_mepc;
+    output [`MXLEN-1:0] csr_stl_mstatus;
 
 
     
@@ -108,6 +110,8 @@ module csr(
     assign csr_mstatus[2]     = 1'b0;           // Reserved
     assign csr_mstatus[1]     = 1'b0;           // SIE 
     assign csr_mstatus[0]     = 1'b0;           // UIE 
+
+    assign csr_stl_mstatus = csr_mstatus;
 
     
 

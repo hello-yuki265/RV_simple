@@ -12,8 +12,8 @@ vlog -sv -f sim.f
 
 vsim -voptargs=+acc work.tb_top_core
 
-add wave sim:/tb_top_core/top_core_inst/*
+add wave sim:/tb_top_core/soc_top_inst/*
 view -new wave
-add wave sim:/tb_top_core/top_core_inst/regfile_inst/register
+add wave sim:/tb_top_core/soc_top_inst/simple_core_inst/regfile_inst/register
 
 run -all

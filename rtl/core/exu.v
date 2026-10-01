@@ -46,6 +46,7 @@
     // exp interface
     // ----------------
     input [`PC_WIDTH-1:0] trap_pc,
+    input [`INT_TYPE_NUM-1:0] trap_interrupt,
     input is_trap,
     input is_ret,
     input [`TRAP_DEC_INFO_WIDTH-1:0] trap_dec_bus,

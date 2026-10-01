@@ -17,3 +17,4 @@
 ../rtl/core/pipreg_mem2wb.v
 ../rtl/core/hzdu.v
 ../rtl/core/simple_core.v
+../rtl/soc/soc_top.v

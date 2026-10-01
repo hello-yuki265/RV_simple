@@ -133,6 +133,11 @@
 `define EX_FROM_EX      2'b00
 `define EX_FROM_MEM     2'b01
 `define EX_FROM_WB      2'b10
+
+// --------------------
+// Interrupt 
+// --------------------
+`define INT_TYPE_NUM    8
       
 
 
